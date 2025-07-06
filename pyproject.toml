@@ -1,0 +1,44 @@
+[project]
+name = "itrx"
+version = "0.1.0"
+description = "A chainable iterable wrapper"
+readme = "README.md"
+authors = [
+    { name = "virgesmith", email = "andrew@friarswood.net" }
+]
+license-files = ["LICENCE.md"]
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.16.1",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.12.2",
+]
+
+
+[tool.pytest.ini_options]
+testpaths = [
+  "."
+]
+addopts = "--cov=src/itrx --cov-report html --cov-fail-under=100 --doctest-modules --doctest-glob=README.md"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["B", "D103", "E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/test/*.py" = ["D103"]
+
+[tool.mypy]
+strict = true
+disallow_untyped_defs = true

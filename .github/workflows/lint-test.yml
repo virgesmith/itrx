@@ -1,0 +1,38 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Lint and Test
+
+on:
+  push:
+    branches: [ main ]
+    tags: '**'
+  pull_request:
+    branches: [ main ]
+  # schedule:
+  #   # 6:00 every 7th of month
+  #   - cron:  '0 6 7 * *'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+    - uses: actions/checkout@v4
+    - name: "Setup uv ${{ matrix.python-version }} / ${{ matrix.os }}"
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Build
+      run: uv sync --dev
+    - name: Lint
+      run: |
+        uv run ruff check
+        uv run mypy .
+    - name: Test
+      run: |
+        uv run pytest

@@ -1,0 +1,16 @@
+dist/
+*.egg-info/
+__pycache__/
+.eggs/
+
+.venv*/
+.vscode/
+
+coverage.info
+
+.env
+uv.lock
+.python-version
+
+.coverage
+htmlcov/
