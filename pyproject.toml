@@ -1,6 +1,6 @@
 [project]
 name = "itrx"
-version = "0.1.0"
+version = "0.1.1"
 description = "A chainable iterable wrapper"
 readme = "README.md"
 authors = [
@@ -9,6 +9,10 @@ authors = [
 license-files = ["LICENCE.md"]
 requires-python = ">=3.12"
 dependencies = []
+
+[project.urls]
+"Homepage" = "https://github.com/virgesmith/itrx"
+"Bug Tracker" = "https://github.com/virgesmith/itrx/issues"
 
 [build-system]
 requires = ["hatchling"]

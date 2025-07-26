@@ -1,11 +1,11 @@
-# itrx - A Powerful Iterable Wrapper
+# itrx - A Chainable Iterable Adaptor
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/virgesmith/itrx/refs/heads/main/pyproject.toml)
+![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/virgesmith/itrx/refs/heads/main/pyproject.toml)
 ![PyPI - Version](https://img.shields.io/pypi/v/itrx)
 
 
-`itrx` is a powerful Python library that wraps iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps itertools in syntactic sugar.
+`itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps itertools in syntactic sugar.
 
 Heavily inspired by Rust's [Iterator trait](https://doc.rust-lang.org/std/iter/trait.Iterator.html), `itrx` offers a familiar and robust pattern for sequence manipulation.
 

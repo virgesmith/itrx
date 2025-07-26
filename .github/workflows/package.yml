@@ -5,10 +5,6 @@ on:
   push:
     branches: [ main ]
     tags: '**'
-  workflow_run:
-    workflows: [ "Lint and Test" ]
-    types:
-      - completed
 
 jobs:
   package:

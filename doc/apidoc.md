@@ -1,5 +1,5 @@
 # `Itr` class documentation
-A generic iterator wrapper class inspired by Rust's Iterator trait, providing a composable API for
+A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
 
