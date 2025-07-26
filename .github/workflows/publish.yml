@@ -1,4 +1,6 @@
-name: Publish Python Package to PyPI
+name: Publish to PyPI
+
+# NOTE: although triggered by a tag, the version published will be the version in pyproject.toml on main
 
 on:
   push:
@@ -37,4 +39,4 @@ jobs:
           # This action automatically uses '__token__' as username
           password: ${{ secrets.PYPI_API_TOKEN }}
           # You can specify a different repository if needed (e.g., TestPyPI for testing)
-          repository-url: https://test.pypi.org/legacy/
+          # repository-url: https://test.pypi.org/legacy/
