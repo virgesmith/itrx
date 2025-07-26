@@ -11,7 +11,7 @@ Predicate = Callable[[T], bool]
 
 
 class Itr[T](Iterable[T]):
-    """A generic iterator wrapper class inspired by Rust's Iterator trait, providing a composable API for
+    """A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
     functional-style iteration and transformation over Python iterables.
     """
 
@@ -381,7 +381,6 @@ class Itr[T](Iterable[T]):
             T | None: The n-th item, or None.
 
         """
-        # TODO Rust impl returns None if overruns
         try:
             for _ in range(n - 1):
                 next(self._it)
