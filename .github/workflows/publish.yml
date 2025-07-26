@@ -24,7 +24,6 @@ jobs:
       contents: read # Required to checkout the repository code
 
     steps:
-    steps:
       - uses: actions/checkout@v4
       - name: Install prerequisites
         uses: astral-sh/setup-uv@v5
@@ -32,7 +31,6 @@ jobs:
         run: uv sync --all-groups
       - name: Build wheel
         run: uv build --wheel
-
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
