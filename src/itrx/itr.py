@@ -256,6 +256,31 @@ class Itr[T](Iterable[T]):
         """
         return Itr(itertools.groupby(sorted(self._it, key=grouper), key=grouper)).map(lambda g: (g[0], tuple(g[1])))  # type: ignore[arg-type]
 
+    def inspect(self, func: Callable[[T], None]) -> "Itr[T]":
+        """
+        Applies a function to each item in the iterator for side effects, yielding the original items unchanged.
+        Useful for debugging
+
+        Args:
+            func (Callable[[T], None]): A function to apply to each item for side effects.
+
+        Returns:
+            Itr[T]: An iterator yielding the original items after applying the function.
+
+        Example:
+            >>> Itr([1, 2, 3]).inspect(print).collect()
+            1
+            2
+            3
+            (1, 2, 3)
+        """
+
+        def impl(x: T) -> T:
+            func(x)
+            return x
+
+        return self.map(impl)
+
     def intersperse[U](self, item: U) -> "Itr[T | U]":
         """
         Yield items from the iterator, inserting the given item between each pair of items.
@@ -324,31 +349,50 @@ class Itr[T](Iterable[T]):
         """
         return Itr(map(mapper, self._it))
 
-    def max(self) -> T:
-        """
-        Returns the maximum element from the underlying iterable.
+    def map_while[U](self, predicate: Predicate[T], mapper: Callable[[T], U]) -> "Itr[U]":
+        """Map each item in the iterator using the given function.
+
+        Args:
+            predicate (Callable[[T], bool]): A function that takes an item and returns True to continue taking items, or False to stop.
+            mapper (Callable[[T], U]): The function to apply.
 
         Returns:
-            T: The maximum element in the iterable.
+            Itr[U]: An iterator of mapped items.
 
-        Raises:
-            ValueError: If the iterable is empty.
         """
-        # TODO T should have a "comparable" bound
-        return max(self._it)  # type: ignore[type-var]
+        return Itr(map(mapper, itertools.takewhile(predicate, self._it)))
 
-    def min(self) -> T:
+    def max(self, key: Callable[[T], object] | None = None) -> T:
         """
-        Returns the minimum element from the underlying iterable.
+        Return the maximum element from the iterator, optionally using a key function.
+
+        Args:
+            key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
         Returns:
-            T_co: The smallest element in the iterable.
+            T: The maximum element in the iterator.
 
         Raises:
-            ValueError: If the iterable is empty.
+            ValueError: If the iterator is empty.
         """
         # TODO T should have a "comparable" bound
-        return min(self._it)  # type: ignore[type-var]
+        return max(self._it, key=key)  # type: ignore[type-var, arg-type]
+
+    def min(self, key: Callable[[T], object] | None = None) -> T:
+        """
+        Return the minimum element from the iterator, optionally using a key function.
+
+        Args:
+            key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
+
+        Returns:
+            T: The minimum element in the iterator.
+
+        Raises:
+            ValueError: If the iterator is empty.
+        """
+        # TODO T should have a "comparable" bound
+        return min(self._it, key=key)  # type: ignore[type-var, arg-type]
 
     def next(self) -> T:
         """Return the next item from the iterator, if available. Otherwise raises StopIteration
@@ -426,6 +470,21 @@ class Itr[T](Iterable[T]):
 
         """
         return self.copy().next()
+
+    def position(self, predicate: Predicate[T]) -> int:
+        """
+        Returns the index of the first element in the iterable that satisfies the given predicate.
+
+        Args:
+            predicate (Callable[[T], bool]): A function that takes an element and returns True if the element matches the condition.
+
+        Returns:
+            int: The index of the first matching element.
+
+        Raises:
+            StopIteration: If no element satisfies the predicate.
+        """
+        return self.enumerate().skip_while(lambda x: not predicate(x[1])).next()[0]
 
     def product[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """
