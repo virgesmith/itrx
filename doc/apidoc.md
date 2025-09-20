@@ -205,6 +205,26 @@ Returns:
 
 
 
+### `inspect`
+
+
+Applies a function to each item in the iterator for side effects, yielding the original items unchanged.
+Useful for debugging
+
+Args:
+    func (Callable[[T], None]): A function to apply to each item for side effects.
+
+Returns:
+    Itr[T]: An iterator yielding the original items after applying the function.
+
+Example:
+    >>> Itr([1, 2, 3]).inspect(print).collect()
+    1
+    2
+    3
+    (1, 2, 3)
+
+
 ### `interleave`
 
 
@@ -258,28 +278,47 @@ Returns:
 
 
 
+### `map_while`
+
+Map each item in the iterator using the given function.
+
+Args:
+    predicate (Callable[[T], bool]): A function that takes an item and returns True to continue taking items, or False to stop.
+    mapper (Callable[[T], U]): The function to apply.
+
+Returns:
+    Itr[U]: An iterator of mapped items.
+
+
+
 ### `max`
 
 
-Returns the maximum element from the underlying iterable.
+Return the maximum element from the iterator, optionally using a key function.
+
+Args:
+    key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
 Returns:
-    T: The maximum element in the iterable.
+    T: The maximum element in the iterator.
 
 Raises:
-    ValueError: If the iterable is empty.
+    ValueError: If the iterator is empty.
 
 
 ### `min`
 
 
-Returns the minimum element from the underlying iterable.
+Return the minimum element from the iterator, optionally using a key function.
+
+Args:
+    key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
 Returns:
-    T_co: The smallest element in the iterable.
+    T: The minimum element in the iterator.
 
 Raises:
-    ValueError: If the iterable is empty.
+    ValueError: If the iterator is empty.
 
 
 ### `next`
@@ -351,6 +390,21 @@ Returns:
 Note:
     This method creates a copy of the iterator to avoid modifying the original iterator's state.
 
+
+
+### `position`
+
+
+Returns the index of the first element in the iterable that satisfies the given predicate.
+
+Args:
+    predicate (Callable[[T], bool]): A function that takes an element and returns True if the element matches the condition.
+
+Returns:
+    int: The index of the first matching element.
+
+Raises:
+    StopIteration: If no element satisfies the predicate.
 
 
 ### `product`

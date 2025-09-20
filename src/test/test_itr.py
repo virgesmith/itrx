@@ -98,6 +98,11 @@ def test_map() -> None:
     assert it.collect() == (2, 4, 6)
 
 
+def test_map_while() -> None:
+    it = Itr(range(10)).map_while(lambda x: x < 5, lambda x: x * x)
+    assert it.collect() == (0, 1, 4, 9, 16)
+
+
 def test_next() -> None:
     it = Itr([10, 20, 30])
     assert it.next() == 10
@@ -569,6 +574,13 @@ def test_min_empty_raises() -> None:
         it.min()
 
 
+def test_min_max_key() -> None:
+    d = {"a": 1, "b": 2, "c": 3, "d": 0}
+
+    assert Itr(d).max(key=d.get) == "c"
+    assert Itr(d).min(key=d.get) == "d"
+
+
 def test_batched() -> None:
     it = Itr(range(15)).batched(6)
     assert it.next() == tuple(range(6))
@@ -651,3 +663,27 @@ def test_product_single_empty() -> None:
 
     with pytest.raises(StopIteration):
         Itr("a").product(range(0)).next()
+
+
+def test_position() -> None:
+    assert Itr("abcdefghijklmnopqrstuvwxyz").position(lambda x: x == "a") == 0
+    with pytest.raises(StopIteration):
+        Itr("abcdefghijklmnopqrstuvwxyz").position(lambda x: x == "H")
+
+    a = Itr("abcdefghijklmnopqrstuvwxyz")
+    assert a.position(lambda x: x == "h") == 7
+    assert a.position(lambda x: x == "z") == 17  # counter is reset
+    with pytest.raises(StopIteration):
+        assert a.position(lambda x: x == "a")  # iterator is exhausted
+
+
+def test_inspect() -> None:
+    total = 0
+
+    def log(x: int) -> None:
+        nonlocal total
+        total += x
+
+    a = Itr(range(10)).inspect(log).collect()
+    assert a == tuple(range(10)) # output is unchanged
+    assert total == 45
