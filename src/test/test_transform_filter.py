@@ -1,4 +1,3 @@
-
 import pytest
 
 from itrx import Itr
@@ -124,4 +123,3 @@ def test_groupby_string() -> None:
     assert tuple(d.keys()) == (5, 6)
     assert d[5] == ("apple",)
     assert d[6] == ("banana", "carrot")
-

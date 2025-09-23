@@ -1,4 +1,3 @@
-
 import pytest
 
 from itrx import Itr
@@ -23,8 +22,8 @@ def test_collect_types() -> None:
     with pytest.raises(TypeError):
         it.collect(dict)
 
-    it = Itr("abc").zip((1, 2, 3))
-    assert it.collect(dict) == {"a": 1, "b": 2, "c": 3}
+    it2 = Itr("abc").zip((1, 2, 3))
+    assert it2.collect(dict) == {"a": 1, "b": 2, "c": 3}
 
 
 def test_next() -> None:
