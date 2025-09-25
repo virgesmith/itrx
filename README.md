@@ -92,8 +92,8 @@ Most `Itr` methods are **lazy transformations**, meaning they return a new `Itr`
 
 However, some methods are **eager consumers**. These methods iterate over and consume the underlying data, returning concrete values, collections, or aggregates. Examples include:
 
-*   **Collection methods:** `collect`, `next`, `next_chunk`, `nth`, `position`
-*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `last`, `find`, `fold`
+*   **Collection methods:** `collect`, `last`, `next`, `next_chunk`, `nth`, `position`
+*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `find`, `fold`, `unique`, `value_counts`
 
 ### Important Considerations
 

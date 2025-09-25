@@ -1,5 +1,5 @@
 import itertools
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Generator, Iterable
 from itertools import pairwise
 from typing import Callable, Iterator, TypeVar, overload
@@ -618,6 +618,37 @@ class Itr[T](Iterator[T]):
 
         """
         return Itr(itertools.takewhile(predicate, self._it))
+
+    def unique(self) -> tuple[T, ...]:
+        """
+        Returns a tuple containing the unique elements from the iterator.
+
+        Iterates over the elements in the internal iterator, collecting each unique value,
+        and returns them as a tuple. The order of elements in the returned tuple is not guaranteed.
+
+        Do not use on an infinite iterator
+
+        Returns:
+            tuple[T, ...]: A tuple of unique elements from the iterator.
+        """
+        result = set()
+        for value in self._it:
+            result.add(value)
+        return tuple(result)
+
+    def value_counts(self) -> dict[T, int]:
+        """
+        Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
+
+        Do not use on an infinite iterator
+
+        Returns:
+            dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
+        """
+        counts = defaultdict[T, int](int)
+        for value in self._it:
+            counts[value] += 1
+        return counts
 
     def unzip[U, V](self) -> tuple["Itr[U]", "Itr[V]"]:
         """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of

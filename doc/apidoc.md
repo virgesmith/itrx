@@ -534,6 +534,20 @@ Returns:
 
 
 
+### `unique`
+
+
+Returns a tuple containing the unique elements from the iterator.
+
+Iterates over the elements in the internal iterator, collecting each unique value,
+and returns them as a tuple. The order of elements in the returned tuple is not guaranteed.
+
+Do not use on an infinite iterator
+
+Returns:
+    tuple[T, ...]: A tuple of unique elements from the iterator.
+
+
 ### `unzip`
 
 Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
@@ -547,6 +561,17 @@ Note:
     This implementation does not materialize the entire iterator at once. It uses itertools.tee to split the iterator,
     and then maps over each to extract the respective elements.
 
+
+
+### `value_counts`
+
+
+Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
+
+Do not use on an infinite iterator
+
+Returns:
+    dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
 
 
 ### `zip`
