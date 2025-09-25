@@ -1,6 +1,7 @@
 from operator import add
 
 from itrx import Itr
+from itrx import __version__ as itrx_version
 
 # use Itr to introspect itself for methods and their docstrings
 methods = (
@@ -18,7 +19,7 @@ method_template = """
 """
 
 with open("./doc/apidoc.md", "w") as fd:
-    fd.write("# `Itr` class documentation\n")
+    fd.write(f"# `Itr` v{itrx_version} class documentation\n")
     fd.write(Itr.__doc__ or "")
     fd.write("## Public methods\n")
     fd.write(Itr(methods.items()).map(lambda m: method_template.format(method_name=m[0], method_doc=m[1])).reduce(add))

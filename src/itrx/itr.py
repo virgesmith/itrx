@@ -636,20 +636,6 @@ class Itr[T](Iterator[T]):
             result.add(value)
         return tuple(result)
 
-    def value_counts(self) -> dict[T, int]:
-        """
-        Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
-
-        Do not use on an infinite iterator
-
-        Returns:
-            dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
-        """
-        counts = defaultdict[T, int](int)
-        for value in self._it:
-            counts[value] += 1
-        return counts
-
     def unzip[U, V](self) -> tuple["Itr[U]", "Itr[V]"]:
         """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
         the pairs.
@@ -666,6 +652,20 @@ class Itr[T](Iterator[T]):
         # TODO express that T is tuple[U, V]
         it1, it2 = itertools.tee(self._it, 2)
         return Itr(map(lambda x: x[0], it1)), Itr(map(lambda x: x[1], it2))  # type: ignore[index]
+
+    def value_counts(self) -> dict[T, int]:
+        """
+        Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
+
+        Do not use on an infinite iterator
+
+        Returns:
+            dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
+        """
+        counts = defaultdict[T, int](int)
+        for value in self._it:
+            counts[value] += 1
+        return counts
 
     def zip[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """Yield pairs of items from this iterator and another iterable.
