@@ -651,7 +651,7 @@ class Itr[T](Iterator[T]):
         """
         # TODO express that T is tuple[U, V]
         it1, it2 = itertools.tee(self._it, 2)
-        return Itr(map(lambda x: x[0], it1)), Itr(map(lambda x: x[1], it2))  # type: ignore[index]
+        return Itr((x[0] for x in it1)), Itr((x[1] for x in it2))  # type: ignore[index]
 
     def value_counts(self) -> dict[T, int]:
         """

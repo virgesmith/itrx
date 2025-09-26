@@ -22,12 +22,12 @@ def test_pairwise_basic() -> None:
 
 def test_pairwise_empty() -> None:
     it = Itr[int]([]).pairwise()
-    assert it.collect() == tuple()
+    assert it.collect() == ()
 
 
 def test_pairwise_single_element() -> None:
     it = Itr([42]).pairwise()
-    assert it.collect() == tuple()
+    assert it.collect() == ()
 
 
 def test_pairwise_strings() -> None:

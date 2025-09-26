@@ -37,7 +37,7 @@ addopts = "--cov=src/itrx --cov-report html --cov-fail-under=98 --doctest-module
 line-length = 120
 
 [tool.ruff.lint]
-select = ["B", "D103", "E", "F", "I"]
+select = ["B", "C", "D103", "E", "F", "I"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]

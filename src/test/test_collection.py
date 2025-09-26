@@ -8,7 +8,7 @@ def test_collect() -> None:
     assert it.collect() == (1, 2, 3)
 
     # collect doesnt raise StopIteration
-    assert it.collect() == tuple()
+    assert it.collect() == ()
 
 
 def test_collect_types() -> None:
