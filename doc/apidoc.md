@@ -1,4 +1,4 @@
-# `Itr` class documentation
+# `Itr` v0.1.3 class documentation
 A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
@@ -152,7 +152,7 @@ Returns:
 
 ### `flat_map`
 
-Map each item to an iterable and flatten the results. Each item must itself be iterable.
+Flatten an iterable and map the results. Each item must itself be iterable.
 
 Args:
     mapper (Callable[[U], V]): A function mapping each item to an iterable.
@@ -280,7 +280,7 @@ Returns:
 
 ### `map_while`
 
-Map each item in the iterator using the given function.
+Map each item in the iterator using the given function, while the predicate remains True.
 
 Args:
     predicate (Callable[[T], bool]): A function that takes an item and returns True to continue taking items, or False to stop.
@@ -350,7 +350,7 @@ Args:
     n (int): The index (1-based) of the item to return.
 
 Returns:
-    T | None: The n-th item, or None.
+    T | None: The n-th item, or None. NB nth(0) will return the same value as nth(1)
 
 
 
@@ -534,16 +534,44 @@ Returns:
 
 
 
-### `unzip`
+### `unique`
 
-Splits the iterator of pairs into two separate iterators, each containing the elements from one position of the pairs.
+
+Returns a tuple containing the unique elements from the iterator.
+
+Iterates over the elements in the internal iterator, collecting each unique value,
+and returns them as a tuple. The order of elements in the returned tuple is not guaranteed.
+
+Do not use on an infinite iterator
 
 Returns:
-    tuple[Itr[T], Itr[U]]: A tuple containing two Itr instances. The first contains all first elements, and the second contains all second elements from the original iterator of pairs.
+    tuple[T, ...]: A tuple of unique elements from the iterator.
 
-Raises:
-    ValueError: If the underlying iterator does not yield pairs of equal length (enforced by strict=True).
 
+### `unzip`
+
+Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
+the pairs.
+
+Returns:
+    tuple[Itr[U], Itr[V]]: A tuple containing two Itr instances. The first contains all first elements,
+    and the second contains all second elements from the original iterator of pairs.
+
+Note:
+    This implementation does not materialize the entire iterator at once. It uses itertools.tee to split the iterator,
+    and then maps over each to extract the respective elements.
+
+
+
+### `value_counts`
+
+
+Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
+
+Do not use on an infinite iterator
+
+Returns:
+    dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
 
 
 ### `zip`

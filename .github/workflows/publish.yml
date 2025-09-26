@@ -1,15 +1,12 @@
 name: Publish to PyPI
 
-# NOTE: although triggered by a tag, the version published will be the version in pyproject.toml on main
-
 on:
-  push:
-    tags:
-      - 'v[0-9]+\.[0-9]+\.[0-9]+'
   workflow_run:
     workflows: [ "Lint and Test" ]
     types:
       - completed
+    branches:
+      - main
 
 jobs:
   deploy:

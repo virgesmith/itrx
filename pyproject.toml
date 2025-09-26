@@ -1,7 +1,7 @@
 [project]
 name = "itrx"
-version = "0.1.2"
-description = "A chainable iterable wrapper"
+version = "0.1.3"
+description = "A chainable iterator adapter"
 readme = "README.md"
 authors = [
     { name = "virgesmith", email = "andrew@friarswood.net" }
@@ -37,7 +37,7 @@ addopts = "--cov=src/itrx --cov-report html --cov-fail-under=100 --doctest-modul
 line-length = 120
 
 [tool.ruff.lint]
-select = ["B", "D103", "E", "F", "I"]
+select = ["B", "C", "D103", "E", "F", "I"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]

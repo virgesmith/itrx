@@ -1,8 +1,8 @@
 import itertools
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Generator, Iterable
 from itertools import pairwise
-from typing import Callable, Iterator, Self, TypeVar, overload
+from typing import Callable, Iterator, TypeVar, overload
 
 T = TypeVar("T")
 _CollectT = TypeVar("_CollectT")  # General item type for collected containers
@@ -10,7 +10,7 @@ _CollectT = TypeVar("_CollectT")  # General item type for collected containers
 Predicate = Callable[[T], bool]
 
 
-class Itr[T](Iterable[T]):
+class Itr[T](Iterator[T]):
     """A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
     functional-style iteration and transformation over Python iterables.
     """
@@ -172,17 +172,11 @@ class Itr[T](Iterable[T]):
             T | None: The first matching item, or None.
 
         """
-        try:
-            while True:
-                item = next(self._it)
-                if predicate(item):
-                    return item
-        except StopIteration:
-            return None
+        return next(filter(predicate, self._it), None)
 
     # TODO fix the type annotations
     def flat_map[U, V](self, mapper: Callable[[U], V]) -> "Itr[V]":
-        """Map each item to an iterable and flatten the results. Each item must itself be iterable.
+        """Flatten an iterable and map the results. Each item must itself be iterable.
 
         Args:
             mapper (Callable[[U], V]): A function mapping each item to an iterable.
@@ -191,23 +185,7 @@ class Itr[T](Iterable[T]):
             Itr[V]: An iterator over the mapped and flattened items.
 
         """
-
-        def flat_mapper() -> Generator[V, None, None]:
-            try:
-                while True:
-                    seq = next(self._it)
-                    # TODO fix type annotations are remove this
-                    assert isinstance(seq, Iterable)
-                    iseq = iter(seq)
-                    try:
-                        while True:
-                            yield mapper(next(iseq))
-                    except StopIteration:
-                        pass
-            except StopIteration:
-                return None
-
-        return Itr(flat_mapper())
+        return self.flatten().map(mapper)
 
     def flatten[U](self) -> "Itr[U]":
         """Flatten one level of nesting in the iterator. Each item must itself be iterable.
@@ -350,7 +328,7 @@ class Itr[T](Iterable[T]):
         return Itr(map(mapper, self._it))
 
     def map_while[U](self, predicate: Predicate[T], mapper: Callable[[T], U]) -> "Itr[U]":
-        """Map each item in the iterator using the given function.
+        """Map each item in the iterator using the given function, while the predicate remains True.
 
         Args:
             predicate (Callable[[T], bool]): A function that takes an item and returns True to continue taking items, or False to stop.
@@ -422,7 +400,7 @@ class Itr[T](Iterable[T]):
             n (int): The index (1-based) of the item to return.
 
         Returns:
-            T | None: The n-th item, or None.
+            T | None: The n-th item, or None. NB nth(0) will return the same value as nth(1)
 
         """
         try:
@@ -554,7 +532,7 @@ class Itr[T](Iterable[T]):
 
         return Itr(roller(self))
 
-    def skip(self, n: int) -> Self:
+    def skip(self, n: int) -> "Itr[T]":
         """Skip the next n items in the iterator.
 
         Args:
@@ -564,9 +542,7 @@ class Itr[T](Iterable[T]):
             Self: The iterator itself.
 
         """
-        for _ in range(n):
-            next(self._it)
-        return self
+        return Itr(itertools.islice(self._it, n, None))
 
     def skip_while(self, predicate: Predicate[T]) -> "Itr[T]":
         """Skip items in the iterator as long as the predicate is true, returning self.
@@ -643,19 +619,53 @@ class Itr[T](Iterable[T]):
         """
         return Itr(itertools.takewhile(predicate, self._it))
 
-    def unzip[U, V](self) -> tuple["Itr[U]", "Itr[V]"]:
-        """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of the pairs.
+    def unique(self) -> tuple[T, ...]:
+        """
+        Returns a tuple containing the unique elements from the iterator.
+
+        Iterates over the elements in the internal iterator, collecting each unique value,
+        and returns them as a tuple. The order of elements in the returned tuple is not guaranteed.
+
+        Do not use on an infinite iterator
 
         Returns:
-            tuple[Itr[T], Itr[U]]: A tuple containing two Itr instances. The first contains all first elements, and the second contains all second elements from the original iterator of pairs.
+            tuple[T, ...]: A tuple of unique elements from the iterator.
+        """
+        result = set()
+        for value in self._it:
+            result.add(value)
+        return tuple(result)
 
-        Raises:
-            ValueError: If the underlying iterator does not yield pairs of equal length (enforced by strict=True).
+    def unzip[U, V](self) -> tuple["Itr[U]", "Itr[V]"]:
+        """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
+        the pairs.
+
+        Returns:
+            tuple[Itr[U], Itr[V]]: A tuple containing two Itr instances. The first contains all first elements,
+            and the second contains all second elements from the original iterator of pairs.
+
+        Note:
+            This implementation does not materialize the entire iterator at once. It uses itertools.tee to split the iterator,
+            and then maps over each to extract the respective elements.
 
         """
         # TODO express that T is tuple[U, V]
-        it1, it2 = zip(*self._it, strict=True)
-        return Itr(it1), Itr(it2)
+        it1, it2 = itertools.tee(self._it, 2)
+        return Itr((x[0] for x in it1)), Itr((x[1] for x in it2))  # type: ignore[index]
+
+    def value_counts(self) -> dict[T, int]:
+        """
+        Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
+
+        Do not use on an infinite iterator
+
+        Returns:
+            dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
+        """
+        counts = defaultdict[T, int](int)
+        for value in self._it:
+            counts[value] += 1
+        return counts
 
     def zip[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """Yield pairs of items from this iterator and another iterable.

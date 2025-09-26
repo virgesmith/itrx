@@ -87,13 +87,13 @@ For reference, an equivalent using `itertools` directly:
 
 Most `Itr` methods are **lazy transformations**, meaning they return a new `Itr` instance without immediately processing any data. This allows for arbitrary chaining and efficient memory usage, as items are only processed as they are requested. In most cases, `Itr` simply acts as a convenient wrapper around `itertools`, enabling this left-to-right chaining syntax.
 
-- **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`
+- **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`, `intersperse`, `interleave`
 - **Transformation and filtering:** `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`, `groupby`
 
 However, some methods are **eager consumers**. These methods iterate over and consume the underlying data, returning concrete values, collections, or aggregates. Examples include:
 
-*   **Collection methods:** `collect`, `next`, `next_chunk`, `nth`, `position`
-*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `last`, `find`, `fold`
+*   **Collection methods:** `collect`, `last`, `next`, `next_chunk`, `nth`, `position`
+*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `find`, `fold`, `unique`, `value_counts`
 
 ### Important Considerations
 
