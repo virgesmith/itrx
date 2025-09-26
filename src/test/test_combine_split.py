@@ -279,3 +279,90 @@ def test_inspect() -> None:
     a = Itr(range(10)).inspect(log).collect()
     assert a == tuple(range(10))  # output is unchanged
     assert total == 45
+
+
+def test_unzip_basic() -> None:
+    data = [(1, "a"), (2, "b"), (3, "c")]
+    itr = Itr(data)
+    first, second = itr.unzip()  # type: ignore[var-annotated]
+    assert tuple(first) == (1, 2, 3)
+    assert tuple(second) == ("a", "b", "c")
+
+
+def test_unzip_empty() -> None:
+    itr = Itr([])  # type: ignore[var-annotated]
+    first, second = itr.unzip()  # type: ignore[var-annotated]
+    assert tuple(first) == ()
+    assert tuple(second) == ()
+
+
+def test_unzip_iterator_consumption() -> None:
+    data = [(10, 20), (30, 40)]
+    itr = Itr(data)
+    first, second = itr.unzip()  # type: ignore[var-annotated]
+    # Both can be iterated independently
+    assert next(first) == 10
+    assert next(second) == 20
+    assert next(first) == 30
+    assert next(second) == 40
+    with pytest.raises(StopIteration):
+        next(first)
+    with pytest.raises(StopIteration):
+        next(second)
+
+
+def test_unzip_with_different_types() -> None:
+    data = [(1, None), (2, 3.5), (3, "x")]
+    itr = Itr(data)
+    first, second = itr.unzip()  # type: ignore[var-annotated]
+    assert tuple(first) == (1, 2, 3)
+    assert tuple(second) == (None, 3.5, "x")
+
+
+def test_zip_basic() -> None:
+    a = Itr([1, 2, 3])
+    b = [4, 5, 6]
+    result = a.zip(b).collect(list)
+    assert result == [(1, 4), (2, 5), (3, 6)]
+
+
+def test_zip_left_shorter() -> None:
+    a = Itr([1, 2])
+    b = [3, 4, 5]
+    result = a.zip(b).collect(list)
+    assert result == [(1, 3), (2, 4)]
+
+
+def test_zip_right_shorter() -> None:
+    a = Itr([1, 2, 3])
+    b = [4]
+    result = a.zip(b).collect(list)
+    assert result == [(1, 4)]
+
+
+def test_zip_empty_left() -> None:
+    a = Itr([])  # type: ignore[var-annotated]
+    b = [1, 2, 3]
+    result = a.zip(b).collect(list)
+    assert result == []
+
+
+def test_zip_empty_right() -> None:
+    a = Itr([1, 2, 3])
+    b = []  # type: ignore[var-annotated]
+    result = a.zip(b).collect(list)
+    assert result == []
+
+
+def test_zip_both_empty() -> None:
+    a = Itr([])  # type: ignore[var-annotated]
+    b = []  # type: ignore[var-annotated]
+    result = a.zip(b).collect(list)
+    assert result == []
+
+
+def test_zip_with_different_types() -> None:
+    a = Itr([1, 2, 3])
+    b = ["a", "b", "c"]
+    result = a.zip(b).collect(list)
+    assert result == [(1, "a"), (2, "b"), (3, "c")]

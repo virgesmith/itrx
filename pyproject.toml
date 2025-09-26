@@ -31,7 +31,7 @@ dev = [
 testpaths = [
   "."
 ]
-addopts = "--cov=src/itrx --cov-report html --cov-fail-under=98 --doctest-modules --doctest-glob=README.md"
+addopts = "--cov=src/itrx --cov-report html --cov-fail-under=100 --doctest-modules --doctest-glob=README.md"
 
 [tool.ruff]
 line-length = 120
