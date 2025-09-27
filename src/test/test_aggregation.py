@@ -121,75 +121,33 @@ def test_min_max_key() -> None:
     assert Itr(d).min(key=d.get) == "d"
 
 
-def test_unique_basic() -> None:
-    data = [1, 2, 2, 3, 1, 4]
-    result = Itr(data).unique()
-    # Order is not guaranteed, so compare as sets
-    assert set(result) == {1, 2, 3, 4}
-    assert len(result) == 4
-
-
-def test_unique_empty() -> None:
-    data: list[int] = []
-    result = Itr(data).unique()
-    assert result == ()
-
-
-def test_unique_all_unique() -> None:
-    data = [1, 2, 3, 4, 5]
-    result = Itr(data).unique()
-    assert set(result) == {1, 2, 3, 4, 5}
-    assert len(result) == 5
-
-
-def test_unique_all_duplicates() -> None:
-    data = [7, 7, 7, 7]
-    result = Itr(data).unique()
-    assert result == (7,)
-
-
-def test_unique_strings() -> None:
-    data = ["a", "b", "a", "c", "b"]
-    result = Itr(data).unique()
-    assert set(result) == {"a", "b", "c"}
-    assert len(result) == 3
-
-
-def test_unique_consumes_iterator() -> None:
-    data = [1, 2, 2, 3]
-    itr = Itr(data)
-    _ = itr.unique()
-    with pytest.raises(StopIteration):
-        itr.next()
-
-
 def test_value_counts_basic() -> None:
     data = [1, 2, 2, 3, 1, 4, 2]
-    result = Itr(data).value_counts()
+    result = Itr(data).value_counts().collect(dict)
     assert result == {1: 2, 2: 3, 3: 1, 4: 1}
 
 
 def test_value_counts_empty() -> None:
     data: list[int] = []
-    result = Itr(data).value_counts()
+    result = Itr(data).value_counts().collect(dict)
     assert result == {}
 
 
 def test_value_counts_all_unique() -> None:
     data = [1, 2, 3, 4, 5]
-    result = Itr(data).value_counts()
+    result = Itr(data).value_counts().collect(dict)
     assert result == {1: 1, 2: 1, 3: 1, 4: 1, 5: 1}
 
 
 def test_value_counts_all_duplicates() -> None:
     data = [7, 7, 7, 7]
-    result = Itr(data).value_counts()
+    result = Itr(data).value_counts().collect(dict)
     assert result == {7: 4}
 
 
 def test_value_counts_strings() -> None:
     data = ["a", "b", "a", "c", "b", "b"]
-    result = Itr(data).value_counts()
+    result = Itr(data).value_counts().collect(dict)
     assert result == {"a": 2, "b": 3, "c": 1}
 
 
