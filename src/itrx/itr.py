@@ -1,7 +1,6 @@
 import itertools
-from collections import defaultdict, deque
+from collections import deque
 from collections.abc import Generator, Iterable
-from itertools import pairwise
 from typing import Callable, Iterator, TypeVar, overload
 
 T = TypeVar("T")
@@ -420,7 +419,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, T]]: An iterator over consecutive pairs from the original iterable.
 
         """
-        return Itr(pairwise(self._it))
+        return Itr(itertools.pairwise(self._it))
 
     def partition(self, predicate: Predicate[T]) -> tuple["Itr[T]", "Itr[T]"]:
         """
@@ -619,23 +618,6 @@ class Itr[T](Iterator[T]):
         """
         return Itr(itertools.takewhile(predicate, self._it))
 
-    def unique(self) -> tuple[T, ...]:
-        """
-        Returns a tuple containing the unique elements from the iterator.
-
-        Iterates over the elements in the internal iterator, collecting each unique value,
-        and returns them as a tuple. The order of elements in the returned tuple is not guaranteed.
-
-        Do not use on an infinite iterator
-
-        Returns:
-            tuple[T, ...]: A tuple of unique elements from the iterator.
-        """
-        result = set()
-        for value in self._it:
-            result.add(value)
-        return tuple(result)
-
     def unzip[U, V](self) -> tuple["Itr[U]", "Itr[V]"]:
         """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
         the pairs.
@@ -653,7 +635,7 @@ class Itr[T](Iterator[T]):
         it1, it2 = itertools.tee(self._it, 2)
         return Itr((x[0] for x in it1)), Itr((x[1] for x in it2))  # type: ignore[index]
 
-    def value_counts(self) -> dict[T, int]:
+    def value_counts(self) -> "Itr[tuple[T, int]]":
         """
         Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
 
@@ -662,10 +644,7 @@ class Itr[T](Iterator[T]):
         Returns:
             dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
         """
-        counts = defaultdict[T, int](int)
-        for value in self._it:
-            counts[value] += 1
-        return counts
+        return self.groupby(lambda x: x).map(lambda x: (x[0], len(x[1])))
 
     def zip[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """Yield pairs of items from this iterator and another iterable.
