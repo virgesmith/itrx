@@ -5,7 +5,7 @@
 ![PyPI - Version](https://img.shields.io/pypi/v/itrx)
 
 
-`itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps itertools in syntactic sugar.
+`itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps `itertools` in syntactic sugar.
 
 Heavily inspired by Rust's [Iterator trait](https://doc.rust-lang.org/std/iter/trait.Iterator.html), `itrx` offers a familiar and robust pattern for sequence manipulation.
 
@@ -71,29 +71,31 @@ Here's how to group words by their length into a dictionary:
 
 ```
 
-For reference, an equivalent using `itertools` directly:
+For reference, the equivalent using `itertools` directly (is fairly readable):
 
 ```py
 >>> import itertools
 >>> {k: tuple(v) for k, v in itertools.groupby(("apple", "banana", "carrot"), key=len)}
 {5: ('apple',), 6: ('banana', 'carrot')}
 
+
 ```
 
-*Note: Using `collect(dict)` requires an iterable that produces 2-tuples (key-value pairs).*
-
+Note:
+1. Using `collect(dict)` requires an iterable that produces 2-tuples (key-value pairs).
+2. `collect(set)` is equivalent to a "unique" method.
 
 ## How `Itr` Works: Lazy vs. Eager
 
 Most `Itr` methods are **lazy transformations**, meaning they return a new `Itr` instance without immediately processing any data. This allows for arbitrary chaining and efficient memory usage, as items are only processed as they are requested. In most cases, `Itr` simply acts as a convenient wrapper around `itertools`, enabling this left-to-right chaining syntax.
 
-- **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`, `intersperse`, `interleave`
+- **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`, `intersperse`, `interleave`, `value_counts`
 - **Transformation and filtering:** `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`, `groupby`
 
 However, some methods are **eager consumers**. These methods iterate over and consume the underlying data, returning concrete values, collections, or aggregates. Examples include:
 
 *   **Collection methods:** `collect`, `last`, `next`, `next_chunk`, `nth`, `position`
-*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `find`, `fold`, `unique`, `value_counts`
+*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `find`, `fold`
 
 ### Important Considerations
 
@@ -105,7 +107,7 @@ When working with `Itr`, keep these points in mind:
 
 ## API Reference
 
-`Itr` provides a comprehensive set of methods for various iterable operations. For a complete list of methods and their detailed descriptions, please refer to the [API documentation](./doc/apidoc.md).
+For a complete list of `Itr` methods and their detailed descriptions, please refer to the [API documentation](./doc/apidoc.md).
 
 *Note: `apidoc.md` is auto-generated using `Itr` - see [introspect.py](src/scripts/introspect.py).*
 

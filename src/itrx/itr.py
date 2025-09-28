@@ -1,7 +1,6 @@
 import itertools
 from collections import deque
 from collections.abc import Generator, Iterable
-from itertools import pairwise
 from typing import Callable, Iterator, TypeVar, overload
 
 T = TypeVar("T")
@@ -420,7 +419,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, T]]: An iterator over consecutive pairs from the original iterable.
 
         """
-        return Itr(pairwise(self._it))
+        return Itr(itertools.pairwise(self._it))
 
     def partition(self, predicate: Predicate[T]) -> tuple["Itr[T]", "Itr[T]"]:
         """
