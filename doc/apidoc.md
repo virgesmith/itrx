@@ -1,4 +1,4 @@
-# `Itr` v0.1.3 class documentation
+# `Itr` v0.1.4 class documentation
 A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
@@ -532,20 +532,6 @@ Args:
 Returns:
     Self: A new Itr instance containing the items taken while the predicate was true.
 
-
-
-### `unique`
-
-
-Returns a tuple containing the unique elements from the iterator.
-
-Iterates over the elements in the internal iterator, collecting each unique value,
-and returns them as a tuple. The order of elements in the returned tuple is not guaranteed.
-
-Do not use on an infinite iterator
-
-Returns:
-    tuple[T, ...]: A tuple of unique elements from the iterator.
 
 
 ### `unzip`
