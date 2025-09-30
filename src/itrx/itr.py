@@ -30,6 +30,28 @@ class Itr[T](Iterator[T]):
         "Implement the next method of the Iterator protocol"
         return next(self._it)
 
+    def accumulate(self, func: Callable[[T, T], T] | None = None, *, initial: T | None = None) -> "Itr[T]":
+        """
+        Return an iterator over the accumulated results of applying the function (or sum by default) to the items.
+
+        Args:
+            func (Callable[[T, T], T] | None): A binary function to accumulate results. Defaults to addition.
+            initial_value: T | None: An optional starting value. If specified, this value will the the first element of
+            the resulting iterator
+
+        Returns:
+            Itr[T]: An iterator of accumulated results.
+
+        Example:
+            >>> list(Itr([1, 2, 3]).accumulate())
+            [1, 3, 6]
+            >>> list(Itr([2, 3, 4]).accumulate(lambda x, y: x * y))
+            [2, 6, 24]
+        """
+        return Itr(
+            itertools.accumulate(self._it, func, initial=initial)
+        )  # if func else itertools.accumulate(self._it))
+
     def all(self, predicate: Predicate[T]) -> bool:
         """Return True if all elements in the iterator satisfy the predicate.
 

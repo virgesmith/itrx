@@ -20,6 +20,26 @@ Implement the iter method of the Iterator protocol
 
 Implement the next method of the Iterator protocol
 
+### `accumulate`
+
+
+Return an iterator over the accumulated results of applying the function (or sum by default) to the items.
+
+Args:
+    func (Callable[[T, T], T] | None): A binary function to accumulate results. Defaults to addition.
+    initial_value: T | None: An optional starting value. If specified, this value will the the first element of
+    the resulting iterator
+
+Returns:
+    Itr[T]: An iterator of accumulated results.
+
+Example:
+    >>> list(Itr([1, 2, 3]).accumulate())
+    [1, 3, 6]
+    >>> list(Itr([2, 3, 4]).accumulate(lambda x, y: x * y))
+    [2, 6, 24]
+
+
 ### `all`
 
 Return True if all elements in the iterator satisfy the predicate.

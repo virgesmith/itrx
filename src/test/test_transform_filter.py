@@ -1,6 +1,37 @@
+from operator import mul
+
 import pytest
 
 from itrx import Itr
+
+
+def test_accumulate_default_sum() -> None:
+    result = Itr([1, 2, 3]).accumulate().collect()
+    assert result == (1, 3, 6)
+
+
+def test_accumulate_with_func() -> None:
+    result = Itr([2, 3, 4]).accumulate(lambda x, y: x * y).collect()
+    assert result == (2, 6, 24)
+
+    result = Itr([2, 3, 4]).accumulate(mul).collect()
+    assert result == (2, 6, 24)
+
+
+def test_accumulate_with_initial() -> None:
+    result = Itr([1, 2, 3]).accumulate(mul, initial=10).collect()
+    assert result == (10, 10, 20, 60)
+
+
+def test_accumulate_empty() -> None:
+    data: list[int] = []
+    result = Itr(data).accumulate().collect()
+    assert result == ()
+
+
+def test_accumulate_single_element() -> None:
+    result = Itr([5]).accumulate().collect()
+    assert result == (5,)
 
 
 def test_filter() -> None:
