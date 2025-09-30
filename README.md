@@ -5,7 +5,7 @@
 ![PyPI - Version](https://img.shields.io/pypi/v/itrx)
 
 
-`itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps `itertools` in syntactic sugar.
+`itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps `itertools` and/or builtins in syntactic sugar.
 
 Heavily inspired by Rust's [Iterator trait](https://doc.rust-lang.org/std/iter/trait.Iterator.html), `itrx` offers a familiar and robust pattern for sequence manipulation.
 

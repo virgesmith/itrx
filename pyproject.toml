@@ -1,6 +1,6 @@
 [project]
 name = "itrx"
-version = "0.1.4"
+version = "0.1.5"
 description = "A chainable iterator adapter"
 readme = "README.md"
 authors = [
@@ -25,6 +25,9 @@ dev = [
     "pytest-cov>=6.2.1",
     "ruff>=0.12.2",
 ]
+
+[project.scripts]
+apidoc = "scripts.introspect:main"
 
 [tool.pytest.ini_options]
 testpaths = [
