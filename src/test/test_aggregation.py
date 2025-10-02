@@ -1,4 +1,5 @@
 from operator import add, mul, sub, truediv
+
 import pytest
 
 from itrx import Itr
