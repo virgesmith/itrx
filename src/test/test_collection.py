@@ -51,8 +51,11 @@ def test_next_chunk_overrun() -> None:
 
 def test_nth() -> None:
     it = Itr([10, 20, 30, 40])
+    with pytest.raises(ValueError):
+        it.nth(0)
     assert it.nth(3) == 30
-    assert it.nth(10) is None
+    with pytest.raises(StopIteration):
+        it.nth(10)
 
 
 def test_position() -> None:

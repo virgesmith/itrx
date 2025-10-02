@@ -1,3 +1,5 @@
+from operator import add, mul, sub, truediv
+
 import pytest
 
 from itrx import Itr
@@ -50,7 +52,12 @@ def test_last() -> None:
 
 def test_reduce() -> None:
     it = Itr([1, 2, 3, 4])
-    assert it.reduce(lambda a, b: a + b) == 10
+    assert it.copy().reduce(lambda a, b: a + b) == 10
+
+    assert it.copy().reduce(add) == 10
+    assert it.copy().reduce(sub) == -8
+    assert it.copy().reduce(mul) == 24
+    assert it.copy().reduce(truediv) == 1 / 24
 
 
 def test_reduce_empty() -> None:

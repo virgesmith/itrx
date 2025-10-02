@@ -1,5 +1,4 @@
 import itertools
-from collections import deque
 from collections.abc import Generator, Iterable
 from typing import Callable, Iterator, TypeVar, overload
 
@@ -30,6 +29,29 @@ class Itr[T](Iterator[T]):
     def __next__(self) -> T:
         "Implement the next method of the Iterator protocol"
         return next(self._it)
+
+    def accumulate(self, func: Callable[[T, T], T] | None = None, *, initial: T | None = None) -> "Itr[T]":
+        """
+        Return an iterator over the accumulated results of applying the function (or sum by default) to the items. Does
+        not collapse the iterator like `reduce` or `fold`
+
+        Args:
+            func (Callable[[T, T], T] | None): A binary function to accumulate results. Defaults to addition.
+            initial_value: T | None: An optional starting value. If specified, this value will the the first element of
+            the resulting iterator
+
+        Returns:
+            Itr[T]: An iterator of accumulated results.
+
+        Example:
+            >>> list(Itr([1, 2, 3]).accumulate())
+            [1, 3, 6]
+            >>> list(Itr([2, 3, 4]).accumulate(lambda x, y: x * y))
+            [2, 6, 24]
+        """
+        return Itr(
+            itertools.accumulate(self._it, func, initial=initial)
+        )  # if func else itertools.accumulate(self._it))
 
     def all(self, predicate: Predicate[T]) -> bool:
         """Return True if all elements in the iterator satisfy the predicate.
@@ -72,8 +94,6 @@ class Itr[T](Iterator[T]):
             >>> list(Itr(range(7)).batched(3))
             [(0, 1, 2), (3, 4, 5), (6,)]
         """
-        if n < 1:
-            raise ValueError("Batch size must be at least 1")
         return Itr(itertools.batched(self._it, n))
 
     def chain[U](self, other: Iterable[U]) -> "Itr[T | U]":
@@ -309,9 +329,7 @@ class Itr[T](Iterator[T]):
             T: The last item.
 
         """
-        last_item = None
-        for item in self._it:
-            last_item = item
+        *_, last_item = self._it
         return last_item
 
     def map[U](self, mapper: Callable[[T], U]) -> "Itr[U]":
@@ -392,22 +410,21 @@ class Itr[T](Iterator[T]):
         """
         return self.take(n).collect()
 
-    def nth(self, n: int) -> T | None:
+    def nth(self, n: int) -> T:
         """Return the n-th item (1-based) from the iterator, or None if out of range.
 
         Args:
             n (int): The index (1-based) of the item to return.
 
         Returns:
-            T | None: The n-th item, or None. NB nth(0) will return the same value as nth(1)
+            T: The n-th item.
+
+        Raises:
+            StopIteration: if the iterator is exhausted.
+            ValueError: if n < 1
 
         """
-        try:
-            for _ in range(n - 1):
-                next(self._it)
-            return next(self._it)
-        except StopIteration:
-            return None
+        return self.skip(n - 1).next()
 
     def pairwise(self) -> "Itr[tuple[T, T]]":
         """Returns an iterator that yields consecutive pairs of elements from the iterable.
@@ -480,10 +497,7 @@ class Itr[T](Iterator[T]):
             T: The final reduced value.
 
         """
-        result = next(self._it)
-        for item in self._it:
-            result = func(result, item)
-        return result
+        return self.fold(next(self._it), func)
 
     def repeat(self, n: int) -> "Itr[T]":
         """
@@ -519,17 +533,9 @@ class Itr[T](Iterator[T]):
         if n < 1:
             raise ValueError(f"Invalid rolling window {n} (must be at least 1)")
 
-        def roller(it: "Itr[T]") -> Generator[tuple[T, ...], None, None]:
-            try:
-                window = deque(it.take(n).collect(), maxlen=n)
-                while True:
-                    if len(window) == n:
-                        yield tuple(window)
-                    window.append(it.next())
-            except StopIteration:
-                return None
-
-        return Itr(roller(self))
+        iterators = itertools.tee(self._it, n)
+        shifted_iterators = (itertools.islice(it, i, None) for i, it in enumerate(iterators))
+        return Itr(zip(*shifted_iterators, strict=False))
 
     def skip(self, n: int) -> "Itr[T]":
         """Skip the next n items in the iterator.
@@ -582,17 +588,7 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator yielding every n-th item.
 
         """
-
-        def stepper(n: int) -> Generator[T, None, None]:
-            try:
-                while True:
-                    yield next(self._it)
-                    for _ in range(n - 1):
-                        next(self._it)
-            except StopIteration:
-                return None
-
-        return Itr(stepper(n))
+        return Itr(itertools.islice(self._it, 0, None, n))
 
     def take(self, n: int) -> "Itr[T]":
         """Return an iterator over the next n items from the iterator.
@@ -637,12 +633,13 @@ class Itr[T](Iterator[T]):
 
     def value_counts(self) -> "Itr[tuple[T, int]]":
         """
-        Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
+        Returns an iterator over the number of times distinct items appear in the original iterator, which can be
+        collected into a dict.
 
         Do not use on an infinite iterator
 
         Returns:
-            dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
+            Itr[tuple[T, int]]: An iterator of pairs of values and counts.
         """
         return self.groupby(lambda x: x).map(lambda x: (x[0], len(x[1])))
 

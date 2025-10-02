@@ -5,7 +5,7 @@
 ![PyPI - Version](https://img.shields.io/pypi/v/itrx)
 
 
-`itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps `itertools` in syntactic sugar.
+`itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps `itertools` and/or builtins in syntactic sugar.
 
 Heavily inspired by Rust's [Iterator trait](https://doc.rust-lang.org/std/iter/trait.Iterator.html), `itrx` offers a familiar and robust pattern for sequence manipulation.
 
@@ -90,7 +90,7 @@ Note:
 Most `Itr` methods are **lazy transformations**, meaning they return a new `Itr` instance without immediately processing any data. This allows for arbitrary chaining and efficient memory usage, as items are only processed as they are requested. In most cases, `Itr` simply acts as a convenient wrapper around `itertools`, enabling this left-to-right chaining syntax.
 
 - **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`, `intersperse`, `interleave`, `value_counts`
-- **Transformation and filtering:** `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`, `groupby`
+- **Transformation and filtering:** `accumulated`, `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`, `groupby`
 
 However, some methods are **eager consumers**. These methods iterate over and consume the underlying data, returning concrete values, collections, or aggregates. Examples include:
 

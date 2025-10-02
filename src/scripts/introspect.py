@@ -28,5 +28,10 @@ def generate_apidoc(cls: type, file: Path) -> None:
         fd.write(methods.map(lambda m: method_template.format(method_name=m[0], method_doc=m[1])).reduce(add))
 
 
-if __name__ == "__main__":
+def main() -> None:
+    "Entry point"
     generate_apidoc(Itr, Path("./doc/apidoc.md"))
+
+
+if __name__ == "__main__":
+    main()

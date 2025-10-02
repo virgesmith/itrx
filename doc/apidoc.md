@@ -1,4 +1,4 @@
-# `Itr` v0.1.4 class documentation
+# `Itr` v0.1.5 class documentation
 A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
@@ -19,6 +19,26 @@ Implement the iter method of the Iterator protocol
 ### `__next__`
 
 Implement the next method of the Iterator protocol
+
+### `accumulate`
+
+
+Return an iterator over the accumulated results of applying the function (or sum by default) to the items.
+
+Args:
+    func (Callable[[T, T], T] | None): A binary function to accumulate results. Defaults to addition.
+    initial_value: T | None: An optional starting value. If specified, this value will the the first element of
+    the resulting iterator
+
+Returns:
+    Itr[T]: An iterator of accumulated results.
+
+Example:
+    >>> list(Itr([1, 2, 3]).accumulate())
+    [1, 3, 6]
+    >>> list(Itr([2, 3, 4]).accumulate(lambda x, y: x * y))
+    [2, 6, 24]
+
 
 ### `all`
 
@@ -350,7 +370,11 @@ Args:
     n (int): The index (1-based) of the item to return.
 
 Returns:
-    T | None: The n-th item, or None. NB nth(0) will return the same value as nth(1)
+    T: The n-th item.
+
+Raises:
+    StopIteration: if the iterator is exhausted.
+    ValueError: if n < 1
 
 
 
@@ -552,12 +576,13 @@ Note:
 ### `value_counts`
 
 
-Returns a dictionary mapping each unique element in the iterator to the number of times it appears.
+Returns an iterator over the number of times distinct items appear in the original iterator, which can be
+collected into a dict.
 
 Do not use on an infinite iterator
 
 Returns:
-    dict[T, int]: A dictionary where the keys are unique elements from the iterator and the values are their respective counts.
+    Itr[tuple[T, int]]: An iterator of pairs of values and counts.
 
 
 ### `zip`

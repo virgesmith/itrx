@@ -213,6 +213,9 @@ def test_batched_empty() -> None:
     with pytest.raises(StopIteration):
         it.next()
 
+    with pytest.raises(ValueError):
+        Itr(range(5)).batched(-1).collect()
+
 
 def test_batched_invalid() -> None:
     with pytest.raises(ValueError):
