@@ -32,7 +32,8 @@ class Itr[T](Iterator[T]):
 
     def accumulate(self, func: Callable[[T, T], T] | None = None, *, initial: T | None = None) -> "Itr[T]":
         """
-        Return an iterator over the accumulated results of applying the function (or sum by default) to the items.
+        Return an iterator over the accumulated results of applying the function (or sum by default) to the items. Does
+        not collapse the iterator like `reduce` or `fold`
 
         Args:
             func (Callable[[T, T], T] | None): A binary function to accumulate results. Defaults to addition.
@@ -496,10 +497,7 @@ class Itr[T](Iterator[T]):
             T: The final reduced value.
 
         """
-        result = next(self._it)
-        for item in self._it:
-            result = func(result, item)
-        return result
+        return self.fold(next(self._it), func)
 
     def repeat(self, n: int) -> "Itr[T]":
         """
