@@ -1,9 +1,16 @@
 import itertools
 from collections.abc import Generator, Iterable
-from typing import Callable, Iterator, TypeVar, overload
+from typing import Callable, Iterator, Protocol, TypeVar, cast, overload
 
 T = TypeVar("T")
 _CollectT = TypeVar("_CollectT")  # General item type for collected containers
+_Self = TypeVar("_Self", bound="Comparable")
+
+
+class Comparable(Protocol):
+    def __lt__(self: _Self, other: _Self) -> bool: ...
+    def __eq__(self, other: object) -> bool: ...
+
 
 Predicate = Callable[[T], bool]
 
@@ -193,7 +200,6 @@ class Itr[T](Iterator[T]):
         """
         return next(filter(predicate, self._it), None)
 
-    # TODO fix the type annotations
     def flat_map[U, V](self, mapper: Callable[[U], V]) -> "Itr[V]":
         """Flatten an iterable and map the results. Each item must itself be iterable.
 
@@ -357,23 +363,22 @@ class Itr[T](Iterator[T]):
         """
         return Itr(map(mapper, itertools.takewhile(predicate, self._it)))
 
-    def max(self, key: Callable[[T], object] | None = None) -> T:
+    def max[U: Comparable](self, key: Callable[[U], object] | None = None) -> T:
         """
         Return the maximum element from the iterator, optionally using a key function.
 
         Args:
-            key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
+            key (Callable[[ComparableT], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
         Returns:
-            T: The maximum element in the iterator.
+            ComparableT: The maximum element in the iterator.
 
         Raises:
             ValueError: If the iterator is empty.
         """
-        # TODO T should have a "comparable" bound
         return max(self._it, key=key)  # type: ignore[type-var, arg-type]
 
-    def min(self, key: Callable[[T], object] | None = None) -> T:
+    def min[U: Comparable](self, key: Callable[[U], object] | None = None) -> T:
         """
         Return the minimum element from the iterator, optionally using a key function.
 
@@ -386,7 +391,6 @@ class Itr[T](Iterator[T]):
         Raises:
             ValueError: If the iterator is empty.
         """
-        # TODO T should have a "comparable" bound
         return min(self._it, key=key)  # type: ignore[type-var, arg-type]
 
     def next(self) -> T:
@@ -627,7 +631,7 @@ class Itr[T](Iterator[T]):
             and then maps over each to extract the respective elements.
 
         """
-        # TODO express that T is tuple[U, V]
+        # TODO can/should I express that T is tuple[U, V]
         it1, it2 = itertools.tee(self._it, 2)
         return Itr((x[0] for x in it1)), Itr((x[1] for x in it2))  # type: ignore[index]
 
