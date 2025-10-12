@@ -1,6 +1,6 @@
 [project]
 name = "itrx"
-version = "0.1.5"
+version = "0.1.6"
 description = "A chainable iterator adapter"
 readme = "README.md"
 authors = [
@@ -8,6 +8,13 @@ authors = [
 ]
 license-files = ["LICENCE.md"]
 requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = []
 
 [project.urls]
@@ -39,7 +46,7 @@ addopts = "--cov=src/itrx --cov-report html --cov-fail-under=100 --doctest-modul
 line-length = 120
 
 [tool.ruff.lint]
-select = ["B", "C", "D103", "E", "F", "I", "SIM"]
+select = ["ARG", "B", "C", "D103", "E", "F", "I", "N", "PERF", "PTH", "RET", "RUF", "SIM", "UP", "W"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]

@@ -77,7 +77,7 @@ def test_skip_while_all_skipped() -> None:
 
 
 def test_skip_while_empty_iterable() -> None:
-    it = Itr[str]([]).skip_while(lambda x: True)
+    it = Itr[str]([]).skip_while(lambda _: True)
     assert it.collect() == ()
 
 
@@ -106,7 +106,7 @@ def test_take_while_none_true() -> None:
 
 def test_take_while_empty_iterable() -> None:
     it = Itr[float]([])
-    taken = it.take_while(lambda x: True)
+    taken = it.take_while(lambda _: True)
     assert taken.collect() == ()
 
 
