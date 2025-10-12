@@ -127,7 +127,7 @@ def test_partition_all_false() -> None:
 
 def test_partition_empty() -> None:
     it: Itr[int] = Itr([])
-    a, b = it.partition(lambda x: True)
+    a, b = it.partition(lambda _: True)
     assert a.collect() == ()
     assert b.collect() == ()
 

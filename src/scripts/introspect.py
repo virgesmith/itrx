@@ -21,7 +21,7 @@ def generate_apidoc(cls: type, file: Path) -> None:
         .map(lambda m: (m, getattr(Itr, m).__doc__))
     )
 
-    with open(file, "w") as fd:
+    with file.open("w") as fd:
         fd.write(f"# `Itr` v{itrx_version} class documentation\n")
         fd.write(Itr.__doc__ or "")
         fd.write("## Public methods\n")

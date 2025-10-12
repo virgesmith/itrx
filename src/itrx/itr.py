@@ -1,6 +1,6 @@
 import itertools
-from collections.abc import Generator, Iterable
-from typing import Callable, Iterator, TypeVar, overload
+from collections.abc import Callable, Generator, Iterable, Iterator
+from typing import TypeVar, overload
 
 T = TypeVar("T")
 _CollectT = TypeVar("_CollectT")  # General item type for collected containers
@@ -629,7 +629,7 @@ class Itr[T](Iterator[T]):
         """
         # TODO express that T is tuple[U, V]
         it1, it2 = itertools.tee(self._it, 2)
-        return Itr((x[0] for x in it1)), Itr((x[1] for x in it2))  # type: ignore[index]
+        return Itr(x[0] for x in it1), Itr(x[1] for x in it2)  # type: ignore[index]
 
     def value_counts(self) -> "Itr[tuple[T, int]]":
         """
