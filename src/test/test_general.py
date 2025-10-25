@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import pytest
 
 from itrx import Itr
@@ -29,24 +31,24 @@ def test_itr_iter_and_next_independent() -> None:
         it.__next__()
 
 
-def test_exhaust_triggers_side_effects_and_consumes_all():
+def test_exhaust_triggers_side_effects_and_consumes_all() -> None:
     side = []
 
-    def gen():
+    def gen() -> Iterator[int]:
         for v in (10, 20, 30):
             side.append(v)
             yield v
 
     itr = Itr(gen())
     assert side == []
-    result = itr.exhaust()
+    result = itr.exhaust()  # type: ignore[func-returns-value]
     assert result is None
     assert side == [10, 20, 30]
     # iterator should now be exhausted
     assert itr.collect() == ()
 
 
-def test_exhaust_consumes_remaining_only():
+def test_exhaust_consumes_remaining_only() -> None:
     itr = Itr(iter([1, 2, 3, 4]))
     first = itr.next()
     assert first == 1
@@ -55,7 +57,7 @@ def test_exhaust_consumes_remaining_only():
     assert itr.collect() == ()
 
 
-def test_exhaust_on_empty_iterator_no_error():
-    itr = Itr(())
+def test_exhaust_on_empty_iterator_no_error() -> None:
+    itr: Itr[None] = Itr(())
     itr.exhaust()  # should not raise
     assert itr.collect() == ()
