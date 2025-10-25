@@ -279,8 +279,8 @@ def test_inspect() -> None:
         nonlocal total
         total += x
 
-    a = Itr(range(10)).inspect(log).collect()
-    assert a == tuple(range(10))  # output is unchanged
+    a = Itr(range(10)).inspect(log).exhaust()
+    assert a is None
     assert total == 45
 
 

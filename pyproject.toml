@@ -1,18 +1,18 @@
 [project]
 name = "itrx"
-version = "0.1.6"
+version = "0.1.7"
 description = "A chainable iterator adapter"
 readme = "README.md"
 authors = [
     { name = "virgesmith", email = "andrew@friarswood.net" }
 ]
+license = "MIT"
 license-files = ["LICENCE.md"]
 requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = []
