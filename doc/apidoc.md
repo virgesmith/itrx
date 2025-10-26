@@ -1,4 +1,4 @@
-# `Itr` v0.1.5 class documentation
+# `Itr` v0.1.7 class documentation
 A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
@@ -23,7 +23,8 @@ Implement the next method of the Iterator protocol
 ### `accumulate`
 
 
-Return an iterator over the accumulated results of applying the function (or sum by default) to the items.
+Return an iterator over the accumulated results of applying the function (or sum by default) to the items. Does
+not collapse the iterator like `reduce` or `fold`
 
 Args:
     func (Callable[[T, T], T] | None): A binary function to accumulate results. Defaults to addition.
@@ -102,6 +103,16 @@ Collect all remaining items from the iterator into a sequence (tuple by default)
 Returns:
     tuple[T]: A list of all remaining items.
 
+
+
+### `consume`
+
+Exhaust the iterator. Useful when only the side effects are required (see inspect)
+
+Do not use on an open-ended iterator
+
+Returns:
+    None
 
 
 ### `copy`
@@ -238,11 +249,11 @@ Returns:
     Itr[T]: An iterator yielding the original items after applying the function.
 
 Example:
-    >>> Itr([1, 2, 3]).inspect(print).collect()
+    >>> Itr([1, 2, 3]).inspect(print).consume()
     1
     2
     3
-    (1, 2, 3)
+    >>>
 
 
 ### `interleave`

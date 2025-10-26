@@ -127,6 +127,16 @@ class Itr[T](Iterator[T]):
         """
         return container(self._it)  # type: ignore[call-arg]
 
+    def consume(self) -> None:
+        """Exhaust the iterator. Useful when only the side effects are required (see inspect)
+
+        Do not use on an open-ended iterator
+
+        Returns:
+            None
+        """
+        deque(self._it, 0)
+
     def copy(self) -> "Itr[T]":
         """Splits the iterator at its *current state* into two independent iterators.
 
@@ -169,16 +179,6 @@ class Itr[T](Iterator[T]):
 
         """
         return Itr(enumerate(self._it, start))
-
-    def exhaust(self) -> None:
-        """Exhaust the iterator. Useful when it has side effects (see inspect)
-
-        Do not use on an open-ended iterator
-
-        Returns:
-            None
-        """
-        deque(self._it, 0)
 
     def filter(self, predicate: Predicate[T]) -> "Itr[T]":
         """Yield only items that satisfy the predicate.
@@ -276,7 +276,7 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator yielding the original items after applying the function.
 
         Example:
-            >>> Itr([1, 2, 3]).inspect(print).exhaust()
+            >>> Itr([1, 2, 3]).inspect(print).consume()
             1
             2
             3

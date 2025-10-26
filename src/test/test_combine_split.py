@@ -279,7 +279,7 @@ def test_inspect() -> None:
         nonlocal total
         total += x
 
-    Itr(range(10)).inspect(log).exhaust()
+    Itr(range(10)).inspect(log).consume()
     assert total == 45
 
 
