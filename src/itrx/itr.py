@@ -1,4 +1,5 @@
 import itertools
+from collections import deque
 from collections.abc import Callable, Generator, Iterable, Iterator
 from typing import TypeVar, overload
 
@@ -125,6 +126,16 @@ class Itr[T](Iterator[T]):
 
         """
         return container(self._it)  # type: ignore[call-arg]
+
+    def consume(self) -> None:
+        """Exhaust the iterator. Useful when only the side effects are required (see inspect)
+
+        Do not use on an open-ended iterator
+
+        Returns:
+            None
+        """
+        deque(self._it, 0)
 
     def copy(self) -> "Itr[T]":
         """Splits the iterator at its *current state* into two independent iterators.
@@ -265,11 +276,11 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator yielding the original items after applying the function.
 
         Example:
-            >>> Itr([1, 2, 3]).inspect(print).collect()
+            >>> Itr([1, 2, 3]).inspect(print).consume()
             1
             2
             3
-            (1, 2, 3)
+            >>>
         """
 
         def impl(x: T) -> T:

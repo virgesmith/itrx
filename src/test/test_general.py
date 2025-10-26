@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import pytest
 
 from itrx import Itr
@@ -27,3 +29,35 @@ def test_itr_iter_and_next_independent() -> None:
     assert it.__next__() == 20
     with pytest.raises(StopIteration):
         it.__next__()
+
+
+def test_consume_triggers_side_effects_and_consumes_all() -> None:
+    side = []
+
+    def gen() -> Iterator[int]:
+        for v in (10, 20, 30):
+            side.append(v)
+            yield v
+
+    itr = Itr(gen())
+    assert side == []
+    result = itr.consume()  # type: ignore[func-returns-value]
+    assert result is None
+    assert side == [10, 20, 30]
+    # iterator should now be exhausted
+    assert itr.collect() == ()
+
+
+def test_consume_consumes_remaining_only() -> None:
+    itr = Itr(iter([1, 2, 3, 4]))
+    first = itr.next()
+    assert first == 1
+    itr.consume()
+    # remaining items were consumed, collect yields empty tuple
+    assert itr.collect() == ()
+
+
+def test_consume_on_empty_iterator_no_error() -> None:
+    itr: Itr[None] = Itr(())
+    itr.consume()  # should not raise
+    assert itr.collect() == ()
