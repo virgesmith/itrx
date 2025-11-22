@@ -50,6 +50,13 @@ def test_last() -> None:
     assert it.last() == 3
 
 
+def test_last_exhausted() -> None:
+    it = Itr([1, 2, 3])
+    it.consume()
+    with pytest.raises(ValueError):
+        it.last()
+
+
 def test_reduce() -> None:
     it = Itr([1, 2, 3, 4])
     assert it.copy().reduce(lambda a, b: a + b) == 10

@@ -45,8 +45,22 @@ def test_flatten() -> None:
 
 
 def test_flat_map() -> None:
-    it: Itr[int] = Itr([[1, 2], [3]]).flat_map(lambda x: x * 10)  # type: ignore[operator]
-    assert it.collect() == (10, 20, 30)
+    it = Itr([1, 2, 3]).flat_map(lambda n: [n] * n)
+    assert it.collect() == (1, 2, 2, 3, 3, 3)
+
+    it = Itr([1, 2, 3]).flat_map(lambda n: range(n))
+    assert it.collect() == (0, 0, 1, 0, 1, 2)
+
+
+def test_flat_map_empty() -> None:
+    it: Itr[int] = Itr([]).flat_map(lambda n: [n] * n)
+    assert it.collect() == ()
+
+
+def test_flat_map_invalid_mapper() -> None:
+    # mapper must return an iterable
+    with pytest.raises(TypeError):
+        Itr([1, 2, 3]).flat_map(lambda n: n * 2).collect()  # type: ignore[arg-type, return-value]
 
 
 def test_map() -> None:

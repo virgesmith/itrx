@@ -25,7 +25,7 @@ class Itr[T](Iterator[T]):
 
     def __iter__(self) -> Iterator[T]:
         "Implement the iter method of the Iterator protocol"
-        return self._it
+        return self
 
     def __next__(self) -> T:
         "Implement the next method of the Iterator protocol"
@@ -204,18 +204,21 @@ class Itr[T](Iterator[T]):
         """
         return next(filter(predicate, self._it), None)
 
-    # TODO fix the type annotations
-    def flat_map[U, V](self, mapper: Callable[[U], V]) -> "Itr[V]":
-        """Flatten an iterable and map the results. Each item must itself be iterable.
+    def flat_map[U](self, mapper: Callable[[T], Iterable[U]]) -> "Itr[U]":
+        """Map each item to an iterable, then flatten one level.
 
         Args:
-            mapper (Callable[[U], V]): A function mapping each item to an iterable.
+            mapper (Callable[[T], Iterable[U]]): A function mapping each item to an iterable.
 
         Returns:
-            Itr[V]: An iterator over the mapped and flattened items.
+            Itr[U]: An iterator over the mapped and flattened items.
 
         """
-        return self.flatten().map(mapper)
+
+        def gen() -> Iterable[U]:
+            for elem in self:
+                yield from mapper(elem)
+        return Itr(gen())
 
     def flatten[U](self) -> "Itr[U]":
         """Flatten one level of nesting in the iterator. Each item must itself be iterable.
@@ -523,6 +526,8 @@ class Itr[T](Iterator[T]):
         Note:
             This implementation creates `n` independent iterators using `itertools.tee`, which may be inefficient for large `n` or large input iterators.
         """
+        if n == 1:
+            return self
         # this creates n iterators so may be inefficient
         return Itr(itertools.chain(*itertools.tee(self._it, n)))
 
