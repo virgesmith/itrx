@@ -214,8 +214,11 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator over the mapped and flattened items.
 
         """
-        # map then flatten (map -> flatten) is the correct semantics for flat_map
-        return self.map(mapper).flatten()
+
+        def gen() -> Iterable[U]:
+            for elem in self:
+                yield from mapper(elem)
+        return Itr(gen())
 
     def flatten[U](self) -> "Itr[U]":
         """Flatten one level of nesting in the iterator. Each item must itself be iterable.
