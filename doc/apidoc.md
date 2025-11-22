@@ -1,4 +1,4 @@
-# `Itr` v0.1.7 class documentation
+# `Itr` v0.2.0 class documentation
 A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
@@ -183,13 +183,13 @@ Returns:
 
 ### `flat_map`
 
-Flatten an iterable and map the results. Each item must itself be iterable.
+Map each item to an iterable, then flatten one level.
 
 Args:
-    mapper (Callable[[U], V]): A function mapping each item to an iterable.
+    mapper (Callable[[T], Iterable[U]]): A function mapping each item to an iterable.
 
 Returns:
-    Itr[V]: An iterator over the mapped and flattened items.
+    Itr[U]: An iterator over the mapped and flattened items.
 
 
 

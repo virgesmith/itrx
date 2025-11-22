@@ -1,9 +1,8 @@
-# itrx - A Chainable Iterable Adaptor
+# `itrx`: A Chainable Iterable Adaptor
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/virgesmith/itrx/refs/heads/main/pyproject.toml)
 ![PyPI - Version](https://img.shields.io/pypi/v/itrx)
-
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/itrx)
+![PyPI - License](https://img.shields.io/pypi/l/xenoform)
 
 `itrx` is a Python library that adapts iterators, iterables, and generators, providing a Rust-inspired `Iterator` trait experience with added Pythonic conveniences. It enables developers to build complex data processing pipelines with a fluent, chainable, and lazy API. In most cases, it simply wraps `itertools` and/or builtins in syntactic sugar.
 

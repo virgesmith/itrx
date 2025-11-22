@@ -45,8 +45,8 @@ def test_flatten() -> None:
 
 
 def test_flat_map() -> None:
-    it: Itr[int] = Itr([[1, 2], [3]]).flat_map(lambda x: x * 10)  # type: ignore[operator]
-    assert it.collect() == (10, 20, 30)
+    it: Itr[int] = Itr([1, 2, 3]).flat_map(lambda n: [n] * n)
+    assert it.collect() == (1, 2, 2, 3, 3, 3)
 
 
 def test_map() -> None:

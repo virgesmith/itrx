@@ -13,7 +13,7 @@ def test_itr_iter_protocol() -> None:
     assert hasattr(iterator, "__next__")
     # __next__ should yield items in order
     assert next(it) == 1
-    assert next(it) == 2
+    assert next(iterator) == 2
     assert next(it) == 3
     with pytest.raises(StopIteration):
         next(it)
@@ -23,7 +23,7 @@ def test_itr_iter_and_next_independent() -> None:
     data = [10, 20]
     it = Itr(data)
     # __iter__ returns the underlying iterator, so iter(it) is the same as it._it
-    assert iter(it) is it._it
+    assert iter(it) is it
     # __next__ advances the iterator
     assert it.__next__() == 10
     assert it.__next__() == 20
@@ -45,7 +45,8 @@ def test_consume_triggers_side_effects_and_consumes_all() -> None:
     assert result is None
     assert side == [10, 20, 30]
     # iterator should now be exhausted
-    assert itr.collect() == ()
+    with pytest.raises(StopIteration):
+        next(itr)
 
 
 def test_consume_consumes_remaining_only() -> None:
