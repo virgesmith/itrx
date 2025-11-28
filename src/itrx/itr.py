@@ -218,6 +218,7 @@ class Itr[T](Iterator[T]):
         def gen() -> Iterable[U]:
             for elem in self:
                 yield from mapper(elem)
+
         return Itr(gen())
 
     def flatten[U](self) -> "Itr[U]":
