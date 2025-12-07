@@ -94,7 +94,8 @@ def test_map_dict_missing_key_raises_keyerror_for_plain_dict() -> None:
 
 def test_map_dict_empty_iterable_returns_empty_tuple() -> None:
     mapper = {1: "a"}
-    assert Itr([]).map_dict(mapper).collect() == ()
+    empty: list[int] = []
+    assert Itr(empty).map_dict(mapper).collect() == ()
 
 
 def test_skip_while_some_skipped() -> None:
