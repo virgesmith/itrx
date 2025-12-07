@@ -359,6 +359,18 @@ class Itr[T](Iterator[T]):
         """
         return Itr(map(mapper, self._it))
 
+    def map_dict[U](self, mapper: dict[T, U]) -> "Itr[U]":
+        """Map each item in the iterator using the given dictionary (supports defaultdict).
+
+        Args:
+            mapper (dict[T], U]): The lookup to apply.
+
+        Returns:
+            Itr[U]: An iterator of mapped items.
+
+        """
+        return Itr(mapper[m] for m in self._it)
+
     def map_while[U](self, predicate: Predicate[T], mapper: Callable[[T], U]) -> "Itr[U]":
         """Map each item in the iterator using the given function, while the predicate remains True.
 

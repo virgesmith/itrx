@@ -1,3 +1,4 @@
+from collections import defaultdict
 from operator import mul
 
 import pytest
@@ -71,6 +72,29 @@ def test_map() -> None:
 def test_map_while() -> None:
     it = Itr(range(10)).map_while(lambda x: x < 5, lambda x: x * x)
     assert it.collect() == (0, 1, 4, 9, 16)
+
+
+def test_map_dict_basic() -> None:
+    mapper = {1: "a", 2: "b", 3: "c"}
+    assert Itr([1, 2, 3]).map_dict(mapper).collect() == ("a", "b", "c")
+
+
+def test_map_dict_defaultdict_handles_missing_keys() -> None:
+    mapper = defaultdict(lambda: "x", {1: "a"})
+    assert Itr([1, 2, 99]).map_dict(mapper).collect() == ("a", "x", "x")
+    # defaultdict should have created entries for missing keys when accessed
+    assert 2 in mapper and 99 in mapper
+
+
+def test_map_dict_missing_key_raises_keyerror_for_plain_dict() -> None:
+    mapper = {1: "a"}
+    with pytest.raises(KeyError):
+        Itr([1, 2]).map_dict(mapper).collect()
+
+
+def test_map_dict_empty_iterable_returns_empty_tuple() -> None:
+    mapper = {1: "a"}
+    assert Itr([]).map_dict(mapper).collect() == ()
 
 
 def test_skip_while_some_skipped() -> None:
