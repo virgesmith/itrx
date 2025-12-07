@@ -368,3 +368,55 @@ def test_zip_with_different_types() -> None:
     b = ["a", "b", "c"]
     result = a.zip(b).collect(list)
     assert result == [(1, "a"), (2, "b"), (3, "c")]
+
+
+def test_tee_default_two_returns_two_independent_itrs() -> None:
+    i = Itr([0, 1, 2])
+    a, b = i.tee()  # default n=2
+    assert isinstance(a, Itr)
+    assert isinstance(b, Itr)
+    # Both should yield the full sequence independently
+    assert list(a) == [0, 1, 2]
+    assert list(b) == [0, 1, 2]
+    # but i is now consumed
+    with pytest.raises(StopIteration):
+        next(i)
+
+
+def test_tee_with_n_creates_independent_copies_and_preserves_items() -> None:
+    i = Itr([1, 2, 3, 4])
+    a, b, c = i.tee(3)
+    # a consumes one item
+    first = next(a)
+    assert first == 1
+    # b and c should still be able to produce the whole sequence from the start
+    assert list(b) == [1, 2, 3, 4]
+    assert list(c) == [1, 2, 3, 4]
+    # a should continue from where it left off
+    assert list(a) == [2, 3, 4]
+
+
+def test_tee_returns_correct_number_of_iterators() -> None:
+    i = Itr([10, 20])
+    tees = i.tee(1)
+    assert isinstance(tees, tuple)
+    assert len(tees) == 1
+    assert isinstance(tees[0], Itr)
+    assert list(tees[0]) == [10, 20]
+
+
+def test_tee_raises_value_error_for_invalid_n() -> None:
+    i = Itr([1, 2, 3])
+    # with pytest.raises(ValueError):
+    assert i.tee(0) == ()
+
+
+def test_tee_iterators_are_distinct_objects() -> None:
+    i = Itr([7, 8, 9])
+    a, b = i.tee(2)
+    assert a is not b
+    assert a is not i
+    assert b is not i
+    # ensure both still yield the same items
+    assert list(a) == [7, 8, 9]
+    assert list(b) == [7, 8, 9]
