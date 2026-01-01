@@ -509,7 +509,13 @@ class Itr[T](Iterator[T]):
 
     def product[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """
-        Creates a new iterator over tuples of the combinations of self and the other iterator
+        Creates a new iterator over the cartesian product of self and the other iterator
+
+        Args:
+            other (Iterable[[T], bool]): Another iterable.
+
+        Returns:
+            Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.
         """
         return Itr(itertools.product(self._it, other))
 
@@ -652,23 +658,16 @@ class Itr[T](Iterator[T]):
         objects, each wrapping one of the tee'd iterators. Each returned Itr yields the same
         sequence of items and can be consumed independently of the others.
 
-        Parameters
-        ----------
-        n : int, optional
-            Number of independent iterators to create (default: 2). Must be >= 1.
+        Args:
+            n (int, optional): Number of independent iterators to create (default: 2). Must be >= 1.
 
-        Returns
-        -------
-        tuple[Itr[T], ...]
-            Tuple of length `n` containing the newly created Itr objects.
+        Returns:
+            tuple[Itr[T], ...]: Tuple of length `n` containing the newly created Itr objects.
 
-        Raises
-        ------
-        ValueError
-            If `n` is less than 1.
+        Raises:
+            ValueError: If `n` is less than 1.
 
-        Notes
-        -----
+        Notes:
         - The implementation uses itertools.tee; the tee'd iterators share internal buffers
           that store items produced by the original iterator until all tees have consumed them.
           If one or more returned iterators lag behind the others, buffered items will be
@@ -679,8 +678,7 @@ class Itr[T](Iterator[T]):
         - Creating the tees is inexpensive, but the memory characteristics depend on how the
           resulting iterators are consumed relative to each other.
 
-        Examples
-        --------
+        Examples:
         >>> i = Itr(range(3))
         >>> a, b = i.tee(2)
         >>> list(a)
