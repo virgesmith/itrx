@@ -457,7 +457,13 @@ Raises:
 ### `product`
 
 
-Creates a new iterator over tuples of the combinations of self and the other iterator
+Creates a new iterator over the cartesian product of self and the other iterator
+
+Args:
+    other (Iterable[[T], bool]): Another iterable.
+
+Returns:
+    Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.
 
 
 ### `reduce`
@@ -591,18 +597,6 @@ This method calls itertools.tee on the wrapped iterator and returns a tuple of I
 objects, each wrapping one of the tee'd iterators. Each returned Itr yields the same
 sequence of items and can be consumed independently of the others.
 
-Note:
-
-- The implementation uses itertools.tee; the tee'd iterators share internal buffers
-that store items produced by the original iterator until all tees have consumed them.
-If one or more returned iterators lag behind the others, buffered items will be
-retained and memory usage can grow.
-- After calling this method, avoid consuming the original wrapped iterator (`self._it`)
-directly; use the returned Itr objects to prevent surprising interactions with the
-shared buffer.
-- Creating the tees is inexpensive, but the memory characteristics depend on how the
-resulting iterators are consumed relative to each other.
-
 Args:
     n (int, optional): Number of independent iterators to create (default: 2). Must be >= 1.
 
@@ -612,13 +606,24 @@ Returns:
 Raises:
     ValueError: If `n` is less than 1.
 
-Example:
-    >>> i = Itr(range(3))
-    >>> a, b = i.tee(2)
-    >>> list(a)
-    [0, 1, 2]
-    >>> list(b)
-    [0, 1, 2]
+Notes:
+- The implementation uses itertools.tee; the tee'd iterators share internal buffers
+  that store items produced by the original iterator until all tees have consumed them.
+  If one or more returned iterators lag behind the others, buffered items will be
+  retained and memory usage can grow.
+- After calling this method, avoid consuming the original wrapped iterator (`self._it`)
+  directly; use the returned Itr objects to prevent surprising interactions with the
+  shared buffer.
+- Creating the tees is inexpensive, but the memory characteristics depend on how the
+  resulting iterators are consumed relative to each other.
+
+Examples:
+>>> i = Itr(range(3))
+>>> a, b = i.tee(2)
+>>> list(a)
+[0, 1, 2]
+>>> list(b)
+[0, 1, 2]
 
 
 ### `unzip`
