@@ -29,7 +29,7 @@ jobs:
     - name: Lint
       run: |
         uv run ruff check
-        uv run mypy .
+        uv run ty check src
     - name: Test
       run: |
         uv run pytest
