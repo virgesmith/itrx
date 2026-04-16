@@ -27,9 +27,9 @@ jobs:
       contents: read # Required to checkout the repository code
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install prerequisites
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
       - name: Install project
         run: uv sync --all-groups
       - name: Build wheel

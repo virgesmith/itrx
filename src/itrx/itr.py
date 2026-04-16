@@ -107,7 +107,7 @@ class Itr[T](Iterator[T]):
             Itr[T | U]: A new iterator yielding items from both iterables.
 
         """
-        return Itr(itertools.chain(self._it, other))
+        return Itr(itertools.chain(self._it, other))  # ty: ignore[invalid-argument-type, invalid-return-type]
 
     @overload
     def collect(self, container: type[tuple[T, ...]] = tuple) -> tuple[T, ...]: ...
@@ -118,14 +118,14 @@ class Itr[T](Iterator[T]):
     @overload
     def collect[K, V](self, container: type[dict[K, V]]) -> dict[K, V]: ...
 
-    def collect(self, container: type[_CollectT] = tuple) -> _CollectT:  # type: ignore[assignment]
+    def collect(self, container: type[_CollectT] = tuple) -> _CollectT:  # ty: ignore[invalid-parameter-default]
         """Collect all remaining items from the iterator into a sequence (tuple by default).
 
         Returns:
             tuple[T]: A list of all remaining items.
 
         """
-        return container(self._it)  # type: ignore[call-arg]
+        return container(self._it)
 
     def consume(self) -> None:
         """Exhaust the iterator. Useful when only the side effects are required (see inspect)
@@ -228,7 +228,7 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator over the flattened items.
 
         """
-        return Itr(itertools.chain.from_iterable(self._it))  # type: ignore[arg-type]
+        return Itr(itertools.chain.from_iterable(self._it))  # ty: ignore[invalid-argument-type]
 
     def fold[U](self, init: U, func: Callable[[U, T], U]) -> U:
         """Reduce the iterator to a single value using a function and an initial value.
@@ -266,7 +266,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[U, tuple[T,...]]]: An iterator over the keys and tuples of values
 
         """
-        return Itr(itertools.groupby(sorted(self._it, key=grouper), key=grouper)).map(lambda g: (g[0], tuple(g[1])))  # type: ignore[arg-type]
+        return Itr(itertools.groupby(sorted(self._it, key=grouper), key=grouper)).map(lambda g: (g[0], tuple(g[1])))  # ty: ignore[no-matching-overload]
 
     def inspect(self, func: Callable[[T], None]) -> "Itr[T]":
         """
@@ -315,7 +315,7 @@ class Itr[T](Iterator[T]):
             except StopIteration:
                 return None
 
-        return Itr(intersperser(item))
+        return Itr(intersperser(item))  # ty: ignore[invalid-return-type]
 
     def interleave[U](self, other: Iterable[U]) -> "Itr[T | U]":
         """
@@ -335,7 +335,7 @@ class Itr[T](Iterator[T]):
             list(result)  # [1, 2, 3, 4, 5, 6]
         """
 
-        return Itr(self.zip(other).flatten())
+        return Itr(self.zip(other).flatten())  # ty: ignore[invalid-return-type]
 
     def last(self) -> T | None:
         """Return the last item from the iterator. Do not use on an open-ended Iterable
@@ -384,7 +384,7 @@ class Itr[T](Iterator[T]):
         """
         return Itr(map(mapper, itertools.takewhile(predicate, self._it)))
 
-    def max(self, key: Callable[[T], object] | None = None) -> T:
+    def max[U](self, key: Callable[[T], object] | None = None) -> object:
         """
         Return the maximum element from the iterator, optionally using a key function.
 
@@ -397,10 +397,10 @@ class Itr[T](Iterator[T]):
         Raises:
             ValueError: If the iterator is empty.
         """
-        # TODO T should have a "comparable" bound
-        return max(self._it, key=key)  # type: ignore[type-var, arg-type]
+        # TODO T or the return type of key should have a "comparable" bound
+        return max(self._it, key=key)  # ty: ignore[no-matching-overload]
 
-    def min(self, key: Callable[[T], object] | None = None) -> T:
+    def min(self, key: Callable[[T], object] | None = None) -> object:
         """
         Return the minimum element from the iterator, optionally using a key function.
 
@@ -413,8 +413,8 @@ class Itr[T](Iterator[T]):
         Raises:
             ValueError: If the iterator is empty.
         """
-        # TODO T should have a "comparable" bound
-        return min(self._it, key=key)  # type: ignore[type-var, arg-type]
+        # TODO T or the return type of key should have a "comparable" bound
+        return min(self._it, key=key)  # ty: ignore[no-matching-overload]
 
     def next(self) -> T:
         """Return the next item from the iterator, if available. Otherwise raises StopIteration
@@ -509,7 +509,13 @@ class Itr[T](Iterator[T]):
 
     def product[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """
-        Creates a new iterator over tuples of the combinations of self and the other iterator
+        Creates a new iterator over the cartesian product of self and the other iterator
+
+        Args:
+            other (Iterable[U]): Another iterable.
+
+        Returns:
+            Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.
         """
         return Itr(itertools.product(self._it, other))
 
@@ -605,7 +611,7 @@ class Itr[T](Iterator[T]):
             >>> list(itr.starmap(lambda x, y: x + y))
             [3, 7]
         """
-        return Itr(itertools.starmap(func, self._it))  # type: ignore[arg-type]
+        return Itr(itertools.starmap(func, self._it))  # ty: ignore[invalid-argument-type]
 
     def step_by(self, n: int) -> "Itr[T]":
         """Yield every n-th item from the iterator.
@@ -652,23 +658,16 @@ class Itr[T](Iterator[T]):
         objects, each wrapping one of the tee'd iterators. Each returned Itr yields the same
         sequence of items and can be consumed independently of the others.
 
-        Parameters
-        ----------
-        n : int, optional
-            Number of independent iterators to create (default: 2). Must be >= 1.
+        Args:
+            n (int, optional): Number of independent iterators to create (default: 2). Must be >= 1.
 
-        Returns
-        -------
-        tuple[Itr[T], ...]
-            Tuple of length `n` containing the newly created Itr objects.
+        Returns:
+            tuple[Itr[T], ...]: Tuple of length `n` containing the newly created Itr objects.
 
-        Raises
-        ------
-        ValueError
-            If `n` is less than 1.
+        Raises:
+            ValueError: If `n` is less than 1.
 
-        Notes
-        -----
+        Notes:
         - The implementation uses itertools.tee; the tee'd iterators share internal buffers
           that store items produced by the original iterator until all tees have consumed them.
           If one or more returned iterators lag behind the others, buffered items will be
@@ -679,8 +678,7 @@ class Itr[T](Iterator[T]):
         - Creating the tees is inexpensive, but the memory characteristics depend on how the
           resulting iterators are consumed relative to each other.
 
-        Examples
-        --------
+        Examples:
         >>> i = Itr(range(3))
         >>> a, b = i.tee(2)
         >>> list(a)
