@@ -15,7 +15,6 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
-dependencies = []
 
 [project.urls]
 "Homepage" = "https://github.com/virgesmith/itrx"
@@ -32,6 +31,11 @@ dev = [
     "pytest-cov>=6.2.1",
     "ruff>=0.12.2",
     "ty>=0.0.31",
+]
+
+[project.optional-dependencies]
+examples = [
+    "ipykernel",
 ]
 
 [project.scripts]

@@ -460,7 +460,7 @@ Raises:
 Creates a new iterator over the cartesian product of self and the other iterator
 
 Args:
-    other (Iterable[[T], bool]): Another iterable.
+    other (Iterable[U]): Another iterable.
 
 Returns:
     Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.

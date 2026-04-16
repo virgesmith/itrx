@@ -112,4 +112,4 @@ For a complete list of `Itr` methods and their detailed descriptions, please ref
 
 ## Examples
 
-Some worked examples can be found [in this notebook](./doc/examples.ipynb).
+Some worked examples can be found [in this notebook](./doc/examples.ipynb). Use e.g. `pip install itrx[examples]` to resolve the extra dependencies.
