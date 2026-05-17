@@ -61,7 +61,7 @@ def test_flat_map_empty() -> None:
 def test_flat_map_invalid_mapper() -> None:
     # mapper must return an iterable
     with pytest.raises(TypeError):
-        Itr([1, 2, 3]).flat_map(lambda n: n * 2).collect()  # type: ignore[arg-type, return-value]
+        Itr([1, 2, 3]).flat_map(lambda n: n * 2).collect()  # ty: ignore[invalid-argument-type]
 
 
 def test_map() -> None:

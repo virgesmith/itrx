@@ -95,7 +95,7 @@ class Itr[T](Iterator[T]):
             >>> list(Itr(range(7)).batched(3))
             [(0, 1, 2), (3, 4, 5), (6,)]
         """
-        return Itr(itertools.batched(self._it, n))
+        return cast("Itr[tuple[T, ...]]", Itr(itertools.batched(self._it, n)))
 
     def chain[U](self, other: Iterable[U]) -> "Itr[T | U]":
         """Chain this iterator with another iterable, yielding all items from self followed by all items from other.
@@ -108,7 +108,7 @@ class Itr[T](Iterator[T]):
 
         """
 
-        return cast("Itr[T | U]", Itr(itertools.chain(self._it, other)))  # ty: ignore[invalid-argument-type]
+        return cast("Itr[T | U]", Itr(itertools.chain(self._it, other)))
 
     @overload
     def collect(self, container: type[tuple[T, ...]] = tuple) -> tuple[T, ...]: ...
@@ -179,7 +179,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[int, T]]: An iterator of (index, item) pairs.
 
         """
-        return Itr(enumerate(self._it, start))
+        return cast("Itr[tuple[int, T]]", Itr(enumerate(self._it, start)))
 
     def filter(self, predicate: Predicate[T]) -> "Itr[T]":
         """Yield only items that satisfy the predicate.
@@ -229,7 +229,7 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator over the flattened items.
 
         """
-        return Itr(itertools.chain.from_iterable(self._it))  # ty: ignore[invalid-argument-type]
+        return Itr(itertools.chain.from_iterable(cast("Iterable[Iterable[U]]", self._it)))
 
     def fold[U](self, init: U, func: Callable[[U, T], U]) -> U:
         """Reduce the iterator to a single value using a function and an initial value.
@@ -267,8 +267,9 @@ class Itr[T](Iterator[T]):
             Itr[tuple[U, tuple[T,...]]]: An iterator over the keys and tuples of values
 
         """
-        groups = ((k, tuple(v)) for k, v in itertools.groupby(sorted(self._it, key=grouper), key=grouper))  # ty: ignore[no-matching-overload]
-        return Itr(groups)
+        key_fn = cast("Callable[[T], Any]", grouper)
+        groups = ((k, tuple(v)) for k, v in itertools.groupby(sorted(self._it, key=key_fn), key=key_fn))
+        return cast("Itr[tuple[U, tuple[T, ...]]]", Itr(groups))
 
     def inspect(self, func: Callable[[T], None]) -> "Itr[T]":
         """
@@ -473,7 +474,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, T]]: An iterator over consecutive pairs from the original iterable.
 
         """
-        return Itr(itertools.pairwise(self._it))
+        return cast("Itr[tuple[T, T]]", Itr(itertools.pairwise(self._it)))
 
     def partition(self, predicate: Predicate[T]) -> tuple["Itr[T]", "Itr[T]"]:
         """
@@ -527,7 +528,7 @@ class Itr[T](Iterator[T]):
         Returns:
             Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.
         """
-        return Itr(itertools.product(self._it, other))
+        return cast("Itr[tuple[T, U]]", Itr(itertools.product(self._it, other)))
 
     def reduce(self, func: Callable[[T, T], T]) -> T:
         """Reduce the iterator to a single value using a function.
@@ -580,7 +581,7 @@ class Itr[T](Iterator[T]):
 
         iterators = itertools.tee(self._it, n)
         shifted_iterators = (itertools.islice(it, i, None) for i, it in enumerate(iterators))
-        return Itr(zip(*shifted_iterators, strict=False))
+        return cast("Itr[tuple[T, ...]]", Itr(zip(*shifted_iterators, strict=False)))
 
     def skip(self, n: int) -> "Itr[T]":
         """Skip the next n items in the iterator.
@@ -621,7 +622,7 @@ class Itr[T](Iterator[T]):
             >>> list(itr.starmap(lambda x, y: x + y))
             [3, 7]
         """
-        return Itr(itertools.starmap(func, self._it))  # ty: ignore[invalid-argument-type]
+        return Itr(itertools.starmap(func, cast("Iterable[Iterable[Any]]", self._it)))
 
     def step_by(self, n: int) -> "Itr[T]":
         """Yield every n-th item from the iterator.
@@ -736,4 +737,4 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, U]]: An iterator of paired items.
 
         """
-        return Itr(zip(self._it, other, strict=False))
+        return cast("Itr[tuple[T, U]]", Itr(zip(self._it, other, strict=False)))
