@@ -338,12 +338,7 @@ class Itr[T](Iterator[T]):
             list(result)  # [1, 2, 3, 4, 5, 6]
         """
 
-        def gen() -> Generator[T | U, None, None]:
-            for a, b in zip(self._it, other, strict=False):
-                yield a
-                yield b
-
-        return cast("Itr[T | U]", Itr(gen()))
+        return cast("Itr[T | U]", Itr(self.zip(other).flatten()))
 
     def last(self) -> T:
         """Return the last item from the iterator. Do not use on an open-ended Iterable
