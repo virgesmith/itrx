@@ -1,7 +1,7 @@
 import itertools
 from collections import deque
 from collections.abc import Callable, Generator, Iterable, Iterator
-from typing import TypeVar, overload
+from typing import Any, TypeVar, cast, overload
 
 T = TypeVar("T")
 _CollectT = TypeVar("_CollectT")  # General item type for collected containers
@@ -95,7 +95,7 @@ class Itr[T](Iterator[T]):
             >>> list(Itr(range(7)).batched(3))
             [(0, 1, 2), (3, 4, 5), (6,)]
         """
-        return Itr(itertools.batched(self._it, n))
+        return cast("Itr[tuple[T, ...]]", Itr(itertools.batched(self._it, n)))
 
     def chain[U](self, other: Iterable[U]) -> "Itr[T | U]":
         """Chain this iterator with another iterable, yielding all items from self followed by all items from other.
@@ -107,7 +107,8 @@ class Itr[T](Iterator[T]):
             Itr[T | U]: A new iterator yielding items from both iterables.
 
         """
-        return Itr(itertools.chain(self._it, other))  # ty: ignore[invalid-argument-type, invalid-return-type]
+
+        return cast("Itr[T | U]", Itr(itertools.chain(self._it, other)))
 
     @overload
     def collect(self, container: type[tuple[T, ...]] = tuple) -> tuple[T, ...]: ...
@@ -178,7 +179,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[int, T]]: An iterator of (index, item) pairs.
 
         """
-        return Itr(enumerate(self._it, start))
+        return cast("Itr[tuple[int, T]]", Itr(enumerate(self._it, start)))
 
     def filter(self, predicate: Predicate[T]) -> "Itr[T]":
         """Yield only items that satisfy the predicate.
@@ -228,7 +229,7 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator over the flattened items.
 
         """
-        return Itr(itertools.chain.from_iterable(self._it))  # ty: ignore[invalid-argument-type]
+        return Itr(itertools.chain.from_iterable(cast("Iterable[Iterable[U]]", self._it)))
 
     def fold[U](self, init: U, func: Callable[[U, T], U]) -> U:
         """Reduce the iterator to a single value using a function and an initial value.
@@ -266,7 +267,9 @@ class Itr[T](Iterator[T]):
             Itr[tuple[U, tuple[T,...]]]: An iterator over the keys and tuples of values
 
         """
-        return Itr(itertools.groupby(sorted(self._it, key=grouper), key=grouper)).map(lambda g: (g[0], tuple(g[1])))  # ty: ignore[no-matching-overload]
+        key_fn = cast("Callable[[T], Any]", grouper)
+        groups = ((k, tuple(v)) for k, v in itertools.groupby(sorted(self._it, key=key_fn), key=key_fn))
+        return cast("Itr[tuple[U, tuple[T, ...]]]", Itr(groups))
 
     def inspect(self, func: Callable[[T], None]) -> "Itr[T]":
         """
@@ -313,9 +316,9 @@ class Itr[T](Iterator[T]):
                     current = next(self._it)
                     yield item
             except StopIteration:
-                return None
+                return
 
-        return Itr(intersperser(item))  # ty: ignore[invalid-return-type]
+        return cast("Itr[T | U]", Itr(intersperser(item)))
 
     def interleave[U](self, other: Iterable[U]) -> "Itr[T | U]":
         """
@@ -335,13 +338,16 @@ class Itr[T](Iterator[T]):
             list(result)  # [1, 2, 3, 4, 5, 6]
         """
 
-        return Itr(self.zip(other).flatten())  # ty: ignore[invalid-return-type]
+        return cast("Itr[T | U]", Itr(self.zip(other).flatten()))
 
-    def last(self) -> T | None:
+    def last(self) -> T:
         """Return the last item from the iterator. Do not use on an open-ended Iterable
 
         Returns:
             T: The last item.
+
+        Raises:
+            ValueError: If the iterator is empty.
 
         """
         *_, last_item = self._it
@@ -384,12 +390,12 @@ class Itr[T](Iterator[T]):
         """
         return Itr(map(mapper, itertools.takewhile(predicate, self._it)))
 
-    def max[U](self, key: Callable[[T], object] | None = None) -> object:
+    def max(self, key: Callable[[T], Any] | None = None) -> T:
         """
         Return the maximum element from the iterator, optionally using a key function.
 
         Args:
-            key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
+            key (Callable[[T], Any] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
         Returns:
             T: The maximum element in the iterator.
@@ -397,15 +403,14 @@ class Itr[T](Iterator[T]):
         Raises:
             ValueError: If the iterator is empty.
         """
-        # TODO T or the return type of key should have a "comparable" bound
-        return max(self._it, key=key)  # ty: ignore[no-matching-overload]
+        return max(self._it, key=key)
 
-    def min(self, key: Callable[[T], object] | None = None) -> object:
+    def min(self, key: Callable[[T], Any] | None = None) -> T:
         """
         Return the minimum element from the iterator, optionally using a key function.
 
         Args:
-            key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
+            key (Callable[[T], Any] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
         Returns:
             T: The minimum element in the iterator.
@@ -413,8 +418,7 @@ class Itr[T](Iterator[T]):
         Raises:
             ValueError: If the iterator is empty.
         """
-        # TODO T or the return type of key should have a "comparable" bound
-        return min(self._it, key=key)  # ty: ignore[no-matching-overload]
+        return min(self._it, key=key)
 
     def next(self) -> T:
         """Return the next item from the iterator, if available. Otherwise raises StopIteration
@@ -451,6 +455,8 @@ class Itr[T](Iterator[T]):
             ValueError: if n < 1
 
         """
+        if n < 1:
+            raise ValueError(f"nth index must be >= 1, got {n}")
         return self.skip(n - 1).next()
 
     def pairwise(self) -> "Itr[tuple[T, T]]":
@@ -463,7 +469,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, T]]: An iterator over consecutive pairs from the original iterable.
 
         """
-        return Itr(itertools.pairwise(self._it))
+        return cast("Itr[tuple[T, T]]", Itr(itertools.pairwise(self._it)))
 
     def partition(self, predicate: Predicate[T]) -> tuple["Itr[T]", "Itr[T]"]:
         """
@@ -517,7 +523,7 @@ class Itr[T](Iterator[T]):
         Returns:
             Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.
         """
-        return Itr(itertools.product(self._it, other))
+        return cast("Itr[tuple[T, U]]", Itr(itertools.product(self._it, other)))
 
     def reduce(self, func: Callable[[T, T], T]) -> T:
         """Reduce the iterator to a single value using a function.
@@ -570,7 +576,7 @@ class Itr[T](Iterator[T]):
 
         iterators = itertools.tee(self._it, n)
         shifted_iterators = (itertools.islice(it, i, None) for i, it in enumerate(iterators))
-        return Itr(zip(*shifted_iterators, strict=False))
+        return cast("Itr[tuple[T, ...]]", Itr(zip(*shifted_iterators, strict=False)))
 
     def skip(self, n: int) -> "Itr[T]":
         """Skip the next n items in the iterator.
@@ -611,7 +617,7 @@ class Itr[T](Iterator[T]):
             >>> list(itr.starmap(lambda x, y: x + y))
             [3, 7]
         """
-        return Itr(itertools.starmap(func, self._it))  # ty: ignore[invalid-argument-type]
+        return Itr(itertools.starmap(func, cast("Iterable[Iterable[Any]]", self._it)))
 
     def step_by(self, n: int) -> "Itr[T]":
         """Yield every n-th item from the iterator.
@@ -688,7 +694,7 @@ class Itr[T](Iterator[T]):
         """
         return tuple(Itr(t) for t in itertools.tee(self._it, n))
 
-    def unzip[U, V](self) -> tuple["Itr[U]", "Itr[V]"]:
+    def unzip[U, V](self: "Itr[tuple[U, V]]") -> tuple["Itr[U]", "Itr[V]"]:
         """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
         the pairs.
 
@@ -701,9 +707,8 @@ class Itr[T](Iterator[T]):
             and then maps over each to extract the respective elements.
 
         """
-        # TODO express that T is tuple[U, V]
         it1, it2 = itertools.tee(self._it, 2)
-        return Itr(x[0] for x in it1), Itr(x[1] for x in it2)  # type: ignore[index]
+        return Itr(x[0] for x in it1), Itr(x[1] for x in it2)
 
     def value_counts(self) -> "Itr[tuple[T, int]]":
         """
@@ -727,4 +732,4 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, U]]: An iterator of paired items.
 
         """
-        return Itr(zip(self._it, other, strict=False))
+        return cast("Itr[tuple[T, U]]", Itr(zip(self._it, other, strict=False)))

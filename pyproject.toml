@@ -1,6 +1,6 @@
 [project]
 name = "itrx"
-version = "0.2.2"
+version = "0.2.3"
 description = "A chainable iterator adapter"
 readme = "README.md"
 authors = [
@@ -29,8 +29,8 @@ dev = [
     "pre-commit>=4.5.1",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
-    "ruff>=0.12.2",
-    "ty>=0.0.31",
+    "ruff>=0.15.13",
+    "ty==0.0.37",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +46,9 @@ testpaths = [
   "."
 ]
 addopts = "--cov=src/itrx --cov-report html --cov-fail-under=100 --doctest-modules --doctest-glob=README.md"
+
+[tool.ty.src]
+exclude = ["doc/"]
 
 [tool.ruff]
 line-length = 120
