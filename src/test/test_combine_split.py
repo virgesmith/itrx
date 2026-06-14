@@ -65,29 +65,29 @@ def test_interleave_first_longer() -> None:
     it1 = Itr([1, 3, 5, 7])
     it2 = Itr([2, 4])
     result = it1.interleave(it2)
-    # Stops when either iterator is exhausted
-    assert result.collect() == (1, 2, 3, 4)
+    # When one iterable is exhausted, the remainder of the other is yielded in order
+    assert result.collect() == (1, 2, 3, 4, 5, 7)
 
 
 def test_interleave_second_longer() -> None:
     it1 = Itr([1, 3])
     it2 = Itr([2, 4, 6, 8])
     result = it1.interleave(it2)
-    assert result.collect() == (1, 2, 3, 4)
+    assert result.collect() == (1, 2, 3, 4, 6, 8)
 
 
 def test_interleave_empty_first() -> None:
     it1: Itr[int] = Itr([])
     it2 = Itr([2, 4, 6])
     result = it1.interleave(it2)
-    assert result.collect() == ()
+    assert result.collect() == (2, 4, 6)
 
 
 def test_interleave_empty_second() -> None:
     it1 = Itr([1, 3, 5])
     it2: Itr[int] = Itr([])
     result = it1.interleave(it2)
-    assert result.collect() == ()
+    assert result.collect() == (1, 3, 5)
 
 
 def test_interleave_both_empty() -> None:

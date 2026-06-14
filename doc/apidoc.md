@@ -1,4 +1,4 @@
-# `Itr` v0.2.2 class documentation
+# `Itr` v0.3.0 class documentation
 A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
@@ -94,6 +94,25 @@ Args:
 Returns:
     Itr[T | U]: A new iterator yielding items from both iterables.
 
+
+
+### `chunk_by`
+
+
+Group *consecutive* elements that share the same key, lazily. Unlike `groupby`, the input is not sorted, so
+only adjacent runs are grouped (mirroring `itertools.groupby` and Rust's `chunk_by`). This preserves order and
+works on infinite iterators.
+
+Args:
+    grouper (Callable[[T], U]): The key function applied to each element.
+
+Returns:
+    Itr[tuple[U, tuple[T, ...]]]: An iterator over (key, group) pairs, where each group is a tuple of the
+    consecutive elements sharing that key.
+
+Example:
+    >>> Itr([1, 1, 2, 3, 3, 1]).chunk_by(lambda x: x).map(lambda kv: kv[0]).collect()
+    (1, 2, 3, 1)
 
 
 ### `collect`
@@ -231,6 +250,14 @@ Sort and then group an iterable by the supplied key function. Note the following
 - The iterable is pre-sorted because itertools.groupby only works correctly on sorted sequences
 - The resulting groupby objects are realised into tuples
 
+Because the input is sorted, this method is **eager**: it consumes and materialises the whole iterator
+immediately (so it must not be used on an infinite iterator), the output is ordered by key, and the keys must be
+mutually orderable. For lazy, order-preserving grouping of consecutive runs, see `chunk_by`.
+
+Semantically this is equivalent to pandas' default `groupby` (i.e. `sort=True`): all items sharing a key are
+collected into a single group regardless of their position, and groups are emitted in sorted-key order. It has
+no `sort=False` (appearance-order) option, requires mutually-orderable keys, and does not drop `None` keys.
+
 Returns:
     Itr[tuple[U, tuple[T,...]]]: An iterator over the keys and tuples of values
 
@@ -259,20 +286,20 @@ Example:
 ### `interleave`
 
 
-Interleaves elements from this iterator with elements from another iterator.
-Stops when either iterator is exhausted.
+Interleaves elements from this iterator with elements from another iterable, yielding alternately from each.
+When one iterable is exhausted, the remaining elements of the other are yielded in order.
 
 Args:
-    other (Itr[U]): Another iterator to interleave with.
+    other (Iterable[U]): Another iterable to interleave with.
 
 Returns:
     Itr[T | U]: A new iterator yielding elements alternately from self and other.
 
 Example:
-    itr1 = Itr([1, 3, 5])
-    itr2 = Itr([2, 4, 6])
-    result = itr1.interleave(itr2)
-    list(result)  # [1, 2, 3, 4, 5, 6]
+    >>> Itr([1, 3, 5]).interleave([2, 4, 6]).collect()
+    (1, 2, 3, 4, 5, 6)
+    >>> Itr([1, 3, 5, 7]).interleave([2, 4]).collect()
+    (1, 2, 3, 4, 5, 7)
 
 
 ### `intersperse`
@@ -294,6 +321,9 @@ Return the last item from the iterator. Do not use on an open-ended Iterable
 
 Returns:
     T: The last item.
+
+Raises:
+    ValueError: If the iterator is empty.
 
 
 
@@ -340,7 +370,7 @@ Returns:
 Return the maximum element from the iterator, optionally using a key function.
 
 Args:
-    key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
+    key (Callable[[T], Any] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
 Returns:
     T: The maximum element in the iterator.
@@ -355,7 +385,7 @@ Raises:
 Return the minimum element from the iterator, optionally using a key function.
 
 Args:
-    key (Callable[[T], object] | None, optional): A function to extract a comparison key from each element. Defaults to None.
+    key (Callable[[T], Any] | None, optional): A function to extract a comparison key from each element. Defaults to None.
 
 Returns:
     T: The minimum element in the iterator.
@@ -387,17 +417,20 @@ Returns:
 
 ### `nth`
 
-Return the n-th item (1-based) from the iterator, or None if out of range.
+Return the n-th item (0-based) from the iterator, consuming the preceding items.
+
+This matches Rust's ``Iterator::nth`` and Python's 0-based indexing conventions: ``nth(0)`` returns the first
+item, ``nth(1)`` the second, and so on.
 
 Args:
-    n (int): The index (1-based) of the item to return.
+    n (int): The index (0-based) of the item to return.
 
 Returns:
     T: The n-th item.
 
 Raises:
-    StopIteration: if the iterator is exhausted.
-    ValueError: if n < 1
+    StopIteration: if the iterator has fewer than n + 1 items.
+    ValueError: if n < 0
 
 
 

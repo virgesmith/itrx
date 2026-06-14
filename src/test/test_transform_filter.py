@@ -1,3 +1,4 @@
+import itertools
 from collections import defaultdict
 from operator import mul
 
@@ -193,3 +194,15 @@ def test_groupby_string() -> None:
     assert tuple(d.keys()) == (5, 6)
     assert d[5] == ("apple",)
     assert d[6] == ("banana", "carrot")
+
+
+def test_chunk_by() -> None:
+    # consecutive runs only, order preserved, no sorting (unlike groupby)
+    it = Itr([1, 1, 2, 3, 3, 1]).chunk_by(lambda x: x)
+    assert it.collect() == ((1, (1, 1)), (2, (2,)), (3, (3, 3)), (1, (1,)))
+
+
+def test_chunk_by_lazy_on_infinite() -> None:
+    # chunk_by is lazy, so it works on unbounded iterators
+    counts = Itr(itertools.count()).chunk_by(lambda n: n // 2).take(3).collect()
+    assert counts == ((0, (0, 1)), (1, (2, 3)), (2, (4, 5)))
