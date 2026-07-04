@@ -28,7 +28,7 @@ not collapse the iterator like `reduce` or `fold`
 
 Args:
     func (Callable[[T, T], T] | None): A binary function to accumulate results. Defaults to addition.
-    initial_value: T | None: An optional starting value. If specified, this value will the the first element of
+    initial (T | None): An optional starting value. If specified, this value will be the first element of
     the resulting iterator
 
 Returns:
@@ -117,10 +117,10 @@ Example:
 
 ### `collect`
 
-Collect all remaining items from the iterator into a sequence (tuple by default).
+Collect all remaining items from the iterator into a container (tuple by default).
 
 Returns:
-    tuple[T]: A list of all remaining items.
+    _CollectT: The remaining items collected into the given container type.
 
 
 
@@ -344,7 +344,7 @@ Returns:
 Map each item in the iterator using the given dictionary (supports defaultdict).
 
 Args:
-    mapper (dict[T], U]): The lookup to apply.
+    mapper (dict[T, U]): The lookup to apply.
 
 Returns:
     Itr[U]: An iterator of mapped items.
@@ -405,7 +405,7 @@ Returns:
 
 ### `next_chunk`
 
-Return a list of the next n items from the iterator.
+Return a tuple of the next n items from the iterator.
 
 Args:
     n (int): The number of items to yield.
@@ -551,19 +551,19 @@ Args:
     n (int): The number of items to skip.
 
 Returns:
-    Self: The iterator itself.
+    Itr[T]: An iterator over the remaining items.
 
 
 
 ### `skip_while`
 
-Skip items in the iterator as long as the predicate is true, returning self.
+Skip items in the iterator as long as the predicate is true.
 
 Args:
     predicate (Callable[[T], bool]): A function to test each element.
 
 Returns:
-    Itr[T]: The iterator itself after skipping items.
+    Itr[T]: An iterator over the remaining items once the predicate first fails.
 
 
 
@@ -610,13 +610,13 @@ Returns:
 
 ### `take_while`
 
-Collects and returns items from the iterator as long as the given predicate is true.
+Yield items from the iterator as long as the given predicate is true.
 
 Args:
     predicate (Callable[[T], bool]): A function that takes an item and returns True to continue taking items, or False to stop.
 
 Returns:
-    Self: A new Itr instance containing the items taken while the predicate was true.
+    Itr[T]: A new Itr yielding items while the predicate is true.
 
 
 

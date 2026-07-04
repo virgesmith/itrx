@@ -51,7 +51,7 @@ When reviewing a PR or diff, check:
 5. **Doctests** — run them mentally; verify the output is correct and the example is illuminating.
 6. **Types** — return types and generics should be precise. Avoid `Any` unless unavoidable.
 7. **Ruff rules** — no rule in the `select` list should be suppressed without justification. The active rules are: `ARG, B, C, D103, E, F, I, N, PERF, PTH, RET, RUF, SIM, UP, W` (E501 is ignored).
-8. **README / apidoc** — if a public method is added or its signature changes, update [README.md](README.md) and regenerate [doc/apidoc.md](doc/apidoc.md) with `uv run apidoc`.
+8. **README / apidoc** — if a public method is added or its signature changes, update [README.md](README.md) and regenerate [doc/apidoc.md](doc/apidoc.md) with `uv run python src/scripts/introspect.py`.
 
 ## QA Rules
 
@@ -99,7 +99,7 @@ pyproject.toml
 3. Add or update tests in the matching file under [src/test/](src/test/).
 4. Add or update the inline doctest on the method.
 5. Run the full gate suite locally.
-6. If the public API changed, update [README.md](README.md) and run `uv run apidoc`.
+6. If the public API changed, update [README.md](README.md) and run `uv run python src/scripts/introspect.py`.
 7. Commit — pre-commit hooks will auto-fix formatting and re-lock `uv.lock`.
 8. Open a PR targeting `main`; CI must pass before merging.
 9. To release: bump the version in [pyproject.toml](pyproject.toml), update [relnotes.md](relnotes.md), merge to `main`, then push a `vX.Y.Z` tag — PyPI publish triggers automatically.

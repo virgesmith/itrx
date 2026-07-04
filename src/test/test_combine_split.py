@@ -407,8 +407,10 @@ def test_tee_returns_correct_number_of_iterators() -> None:
 
 def test_tee_raises_value_error_for_invalid_n() -> None:
     i = Itr([1, 2, 3])
-    # with pytest.raises(ValueError):
-    assert i.tee(0) == ()
+    with pytest.raises(ValueError):
+        i.tee(0)
+    # the underlying iterator is not consumed
+    assert i.collect() == (1, 2, 3)
 
 
 def test_tee_iterators_are_distinct_objects() -> None:
