@@ -1,4 +1,5 @@
 import itertools
+import math
 from collections import Counter, deque
 from collections.abc import Callable, Generator, Iterable, Iterator
 from typing import Any, TypeVar, cast, overload
@@ -7,6 +8,20 @@ T = TypeVar("T")
 _CollectT = TypeVar("_CollectT")  # General item type for collected containers
 
 Predicate = Callable[[T], bool]
+
+_MISSING: Any = object()  # sentinel for an empty peek buffer, since None is a valid item
+
+
+def _flushed[U](itr: "Itr[U]") -> Iterator[U]:
+    """Return the underlying iterator, pushing any peeked item back onto it first.
+
+    Free function rather than a method: ty 0.0.37 mis-infers generics at some call sites when this is a method or
+    property on Itr.
+    """
+    if itr._peeked is not _MISSING:
+        itr._inner = itertools.chain((cast("U", itr._peeked),), itr._inner)
+        itr._peeked = _MISSING
+    return itr._inner
 
 
 class Itr[T](Iterator[T]):
@@ -21,7 +36,8 @@ class Itr[T](Iterator[T]):
             it (Iterable[T]): The iterable to wrap.
 
         """
-        self._it = iter(it)
+        self._peeked: Any = _MISSING
+        self._inner = iter(it)
 
     def __iter__(self) -> Iterator[T]:
         "Implement the iter method of the Iterator protocol"
@@ -29,7 +45,11 @@ class Itr[T](Iterator[T]):
 
     def __next__(self) -> T:
         "Implement the next method of the Iterator protocol"
-        return next(self._it)
+        if self._peeked is not _MISSING:
+            item = cast("T", self._peeked)
+            self._peeked = _MISSING
+            return item
+        return next(self._inner)
 
     def accumulate(self, func: Callable[[T, T], T] | None = None, *, initial: T | None = None) -> "Itr[T]":
         """
@@ -50,9 +70,7 @@ class Itr[T](Iterator[T]):
             >>> list(Itr([2, 3, 4]).accumulate(lambda x, y: x * y))
             [2, 6, 24]
         """
-        return Itr(
-            itertools.accumulate(self._it, func, initial=initial)
-        )  # if func else itertools.accumulate(self._it))
+        return Itr(itertools.accumulate(_flushed(self), func, initial=initial))
 
     def all(self, predicate: Predicate[T]) -> bool:
         """Return True if all elements in the iterator satisfy the predicate.
@@ -64,7 +82,7 @@ class Itr[T](Iterator[T]):
             bool: True if all elements satisfy the predicate, False otherwise.
 
         """
-        return all(predicate(item) for item in self._it)
+        return all(predicate(item) for item in _flushed(self))
 
     def any(self, predicate: Predicate[T]) -> bool:
         """Return True if any element in the iterator satisfies the predicate.
@@ -76,7 +94,7 @@ class Itr[T](Iterator[T]):
             bool: True if any element satisfies the predicate, False otherwise.
 
         """
-        return any(predicate(item) for item in self._it)
+        return any(predicate(item) for item in _flushed(self))
 
     def batched(self, n: int) -> "Itr[tuple[T, ...]]":
         """
@@ -95,7 +113,7 @@ class Itr[T](Iterator[T]):
             >>> list(Itr(range(7)).batched(3))
             [(0, 1, 2), (3, 4, 5), (6,)]
         """
-        return cast("Itr[tuple[T, ...]]", Itr(itertools.batched(self._it, n)))
+        return cast("Itr[tuple[T, ...]]", Itr(itertools.batched(_flushed(self), n)))
 
     def chain[U](self, other: Iterable[U]) -> "Itr[T | U]":
         """Chain this iterator with another iterable, yielding all items from self followed by all items from other.
@@ -108,7 +126,7 @@ class Itr[T](Iterator[T]):
 
         """
 
-        return cast("Itr[T | U]", Itr(itertools.chain(self._it, other)))
+        return cast("Itr[T | U]", Itr(itertools.chain(_flushed(self), other)))
 
     @overload
     def collect(self, container: type[tuple[T, ...]] = tuple) -> tuple[T, ...]: ...
@@ -126,7 +144,7 @@ class Itr[T](Iterator[T]):
             _CollectT: The remaining items collected into the given container type.
 
         """
-        return container(self._it)
+        return container(_flushed(self))
 
     def consume(self) -> None:
         """Exhaust the iterator. Useful when only the side effects are required (see inspect)
@@ -136,7 +154,7 @@ class Itr[T](Iterator[T]):
         Returns:
             None
         """
-        deque(self._it, 0)
+        deque(_flushed(self), 0)
 
     def copy(self) -> "Itr[T]":
         """Splits the iterator at its *current state* into two independent iterators.
@@ -145,7 +163,7 @@ class Itr[T](Iterator[T]):
             Itr[T]: A new Itr instance wrapping one copy of the original iterator.
 
         """
-        self._it, it = itertools.tee(self._it)
+        self._inner, it = itertools.tee(_flushed(self))
         return Itr(it)
 
     def count(self) -> int:
@@ -155,7 +173,7 @@ class Itr[T](Iterator[T]):
             int: The number of remaining items.
 
         """
-        return sum(1 for _ in self._it)
+        return sum(1 for _ in _flushed(self))
 
     def cycle(self) -> "Itr[T]":
         """
@@ -170,7 +188,22 @@ class Itr[T](Iterator[T]):
             >>> cycler.take(5).collect()
             (1, 2, 3, 1, 2)
         """
-        return Itr(itertools.cycle(self._it))
+        return Itr(itertools.cycle(_flushed(self)))
+
+    def dedup(self) -> "Itr[T]":
+        """Lazily remove *consecutive* duplicate items, keeping the first of each run (like Rust's `dedup`).
+
+        Only adjacent duplicates are removed, so the result may still contain repeated values if they are not
+        contiguous. Items are compared by equality and do not need to be hashable. Works on infinite iterators.
+
+        Returns:
+            Itr[T]: An iterator over the items with consecutive duplicates removed.
+
+        Example:
+            >>> Itr([1, 1, 2, 2, 2, 3, 1]).dedup().collect()
+            (1, 2, 3, 1)
+        """
+        return Itr(k for k, _ in itertools.groupby(_flushed(self)))
 
     def enumerate(self, *, start: int = 0) -> "Itr[tuple[int, T]]":
         """Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided
@@ -179,7 +212,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[int, T]]: An iterator of (index, item) pairs.
 
         """
-        return cast("Itr[tuple[int, T]]", Itr(enumerate(self._it, start)))
+        return cast("Itr[tuple[int, T]]", Itr(enumerate(_flushed(self), start)))
 
     def filter(self, predicate: Predicate[T]) -> "Itr[T]":
         """Yield only items that satisfy the predicate.
@@ -191,7 +224,7 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator of filtered items.
 
         """
-        return Itr(filter(predicate, self._it))
+        return Itr(filter(predicate, _flushed(self)))
 
     def find(self, predicate: Predicate[T]) -> T | None:
         """Return the first item in the iterator that satisfies the predicate, or None if not found.
@@ -203,7 +236,7 @@ class Itr[T](Iterator[T]):
             T | None: The first matching item, or None.
 
         """
-        return next(filter(predicate, self._it), None)
+        return next(filter(predicate, _flushed(self)), None)
 
     def flat_map[U](self, mapper: Callable[[T], Iterable[U]]) -> "Itr[U]":
         """Map each item to an iterable, then flatten one level.
@@ -229,7 +262,7 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator over the flattened items.
 
         """
-        return Itr(itertools.chain.from_iterable(cast("Iterable[Iterable[U]]", self._it)))
+        return Itr(itertools.chain.from_iterable(cast("Iterable[Iterable[U]]", _flushed(self))))
 
     def fold[U](self, init: U, func: Callable[[U, T], U]) -> U:
         """Reduce the iterator to a single value using a function and an initial value.
@@ -243,7 +276,7 @@ class Itr[T](Iterator[T]):
 
         """
         result = init
-        for item in self._it:
+        for item in _flushed(self):
             result = func(result, item)
         return result
 
@@ -254,7 +287,7 @@ class Itr[T](Iterator[T]):
             func (Callable[[T], None]): The function to apply.
 
         """
-        for item in self._it:
+        for item in _flushed(self):
             func(item)
 
     def chunk_by[U](self, grouper: Callable[[T], U]) -> "Itr[tuple[U, tuple[T, ...]]]":
@@ -275,7 +308,7 @@ class Itr[T](Iterator[T]):
             (1, 2, 3, 1)
         """
         key_fn = cast("Callable[[T], Any]", grouper)
-        groups = ((k, tuple(v)) for k, v in itertools.groupby(self._it, key=key_fn))
+        groups = ((k, tuple(v)) for k, v in itertools.groupby(_flushed(self), key=key_fn))
         return cast("Itr[tuple[U, tuple[T, ...]]]", Itr(groups))
 
     def groupby[U](self, grouper: Callable[[T], U]) -> "Itr[tuple[U, tuple[T,...]]]":
@@ -297,7 +330,7 @@ class Itr[T](Iterator[T]):
 
         """
         key_fn = cast("Callable[[T], Any]", grouper)
-        groups = ((k, tuple(v)) for k, v in itertools.groupby(sorted(self._it, key=key_fn), key=key_fn))
+        groups = ((k, tuple(v)) for k, v in itertools.groupby(sorted(_flushed(self), key=key_fn), key=key_fn))
         return cast("Itr[tuple[U, tuple[T, ...]]]", Itr(groups))
 
     def inspect(self, func: Callable[[T], None]) -> "Itr[T]":
@@ -339,10 +372,10 @@ class Itr[T](Iterator[T]):
 
         def intersperser(item: U) -> Generator[T | U, None, None]:
             try:
-                current = next(self._it)
+                current = next(_flushed(self))
                 while True:
                     yield current
-                    current = next(self._it)
+                    current = next(_flushed(self))
                     yield item
             except StopIteration:
                 return
@@ -369,7 +402,7 @@ class Itr[T](Iterator[T]):
         _sentinel = object()
 
         def interleaver() -> Generator[T | U, None, None]:
-            for pair in itertools.zip_longest(self._it, other, fillvalue=_sentinel):
+            for pair in itertools.zip_longest(_flushed(self), other, fillvalue=_sentinel):
                 for item in pair:
                     if item is not _sentinel:
                         yield cast("T | U", item)
@@ -386,7 +419,7 @@ class Itr[T](Iterator[T]):
             ValueError: If the iterator is empty.
 
         """
-        *_, last_item = self._it
+        *_, last_item = _flushed(self)
         return last_item
 
     def map[U](self, mapper: Callable[[T], U]) -> "Itr[U]":
@@ -399,7 +432,7 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator of mapped items.
 
         """
-        return Itr(map(mapper, self._it))
+        return Itr(map(mapper, _flushed(self)))
 
     def map_dict[U](self, mapper: dict[T, U]) -> "Itr[U]":
         """Map each item in the iterator using the given dictionary (supports defaultdict).
@@ -411,7 +444,7 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator of mapped items.
 
         """
-        return Itr(mapper[m] for m in self._it)
+        return Itr(mapper[m] for m in _flushed(self))
 
     def map_while[U](self, predicate: Predicate[T], mapper: Callable[[T], U]) -> "Itr[U]":
         """Map each item in the iterator using the given function, while the predicate remains True.
@@ -424,7 +457,7 @@ class Itr[T](Iterator[T]):
             Itr[U]: An iterator of mapped items.
 
         """
-        return Itr(map(mapper, itertools.takewhile(predicate, self._it)))
+        return Itr(map(mapper, itertools.takewhile(predicate, _flushed(self))))
 
     def max(self, key: Callable[[T], Any] | None = None) -> T:
         """
@@ -439,7 +472,7 @@ class Itr[T](Iterator[T]):
         Raises:
             ValueError: If the iterator is empty.
         """
-        return max(self._it, key=key)
+        return max(_flushed(self), key=key)
 
     def min(self, key: Callable[[T], Any] | None = None) -> T:
         """
@@ -454,7 +487,7 @@ class Itr[T](Iterator[T]):
         Raises:
             ValueError: If the iterator is empty.
         """
-        return min(self._it, key=key)
+        return min(_flushed(self), key=key)
 
     def next(self) -> T:
         """Return the next item from the iterator, if available. Otherwise raises StopIteration
@@ -463,7 +496,7 @@ class Itr[T](Iterator[T]):
             T: The next item.
 
         """
-        return next(self._it)
+        return next(self)
 
     def next_chunk(self, n: int) -> tuple[T, ...]:
         """Return a tuple of the next n items from the iterator.
@@ -476,6 +509,38 @@ class Itr[T](Iterator[T]):
 
         """
         return self.take(n).collect()
+
+    def next_if(self, predicate: Predicate[T]) -> T | None:
+        """Consume and return the next item only if it satisfies the predicate (like Rust's `Peekable::next_if`).
+
+        If the next item fails the predicate it is left in place (retrievable by a subsequent `next` or `peek`),
+        and None is returned. None is also returned if the iterator is exhausted.
+
+        Args:
+            predicate (Callable[[T], bool]): A function to test the next item.
+
+        Returns:
+            T | None: The next item if it satisfies the predicate, otherwise None.
+
+        Example:
+            >>> it = Itr([1, 2, 3])
+            >>> it.next_if(lambda x: x < 3)
+            1
+            >>> it.next_if(lambda x: x < 3)
+            2
+            >>> it.next_if(lambda x: x < 3) is None
+            True
+            >>> it.next()
+            3
+        """
+        try:
+            item = self.peek()
+        except StopIteration:
+            return None
+        if predicate(item):
+            self._peeked = _MISSING
+            return item
+        return None
 
     def nth(self, n: int) -> T:
         """Return the n-th item (0-based) from the iterator, consuming the preceding items.
@@ -508,7 +573,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, T]]: An iterator over consecutive pairs from the original iterable.
 
         """
-        return cast("Itr[tuple[T, T]]", Itr(itertools.pairwise(self._it)))
+        return cast("Itr[tuple[T, T]]", Itr(itertools.pairwise(_flushed(self))))
 
     def partition(self, predicate: Predicate[T]) -> tuple["Itr[T]", "Itr[T]"]:
         """
@@ -528,14 +593,27 @@ class Itr[T](Iterator[T]):
     def peek(self) -> T:
         """Returns the next element in the sequence without advancing the iterator.
 
+        The element is held in a single-item lookahead buffer (like Rust's `Peekable`), so repeated calls are O(1)
+        and return the same item until the iterator is advanced.
+
         Returns:
             T: The next element in the sequence.
 
-        Note:
-            This method creates a copy of the iterator to avoid modifying the original iterator's state.
+        Raises:
+            StopIteration: If the iterator is exhausted.
 
+        Example:
+            >>> it = Itr([1, 2])
+            >>> it.peek(), it.peek()
+            (1, 1)
+            >>> it.next()
+            1
+            >>> it.peek()
+            2
         """
-        return self.copy().next()
+        if self._peeked is _MISSING:
+            self._peeked = next(self._inner)
+        return cast("T", self._peeked)
 
     def position(self, predicate: Predicate[T]) -> int:
         """
@@ -552,6 +630,20 @@ class Itr[T](Iterator[T]):
         """
         return self.enumerate().skip_while(lambda x: not predicate(x[1])).next()[0]
 
+    def prod(self) -> T:
+        """Return the product of all items in the iterator (1 if empty). NB Consumes the iterator.
+
+        The items must support multiplication (e.g. numbers).
+
+        Returns:
+            T: The product of all items.
+
+        Example:
+            >>> Itr([2, 3, 4]).prod()
+            24
+        """
+        return cast("T", math.prod(cast("Iterable[Any]", _flushed(self))))
+
     def product[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """
         Creates a new iterator over the cartesian product of self and the other iterator
@@ -562,7 +654,7 @@ class Itr[T](Iterator[T]):
         Returns:
             Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.
         """
-        return cast("Itr[tuple[T, U]]", Itr(itertools.product(self._it, other)))
+        return cast("Itr[tuple[T, U]]", Itr(itertools.product(_flushed(self), other)))
 
     def reduce(self, func: Callable[[T, T], T]) -> T:
         """Reduce the iterator to a single value using a function.
@@ -575,7 +667,7 @@ class Itr[T](Iterator[T]):
             T: The final reduced value.
 
         """
-        return self.fold(next(self._it), func)
+        return self.fold(next(_flushed(self)), func)
 
     def repeat(self, n: int) -> "Itr[T]":
         """
@@ -590,10 +682,8 @@ class Itr[T](Iterator[T]):
         Note:
             This implementation creates `n` independent iterators using `itertools.tee`, which may be inefficient for large `n` or large input iterators.
         """
-        if n == 1:
-            return self
         # this creates n iterators so may be inefficient
-        return Itr(itertools.chain(*itertools.tee(self._it, n)))
+        return Itr(itertools.chain(*itertools.tee(_flushed(self), n)))
 
     def rev(self) -> "Itr[T]":
         """Return a reversed iterator over the remaining items (materializes the sequence).
@@ -603,7 +693,7 @@ class Itr[T](Iterator[T]):
 
         """
         # it's generally impossible to do this without materialising the entire sequence
-        return Itr(tuple(self._it)[::-1])
+        return Itr(tuple(_flushed(self))[::-1])
 
     def rolling(self, n: int) -> "Itr[tuple[T, ...]]":
         """
@@ -613,7 +703,7 @@ class Itr[T](Iterator[T]):
         if n < 1:
             raise ValueError(f"Invalid rolling window {n} (must be at least 1)")
 
-        iterators = itertools.tee(self._it, n)
+        iterators = itertools.tee(_flushed(self), n)
         shifted_iterators = (itertools.islice(it, i, None) for i, it in enumerate(iterators))
         return cast("Itr[tuple[T, ...]]", Itr(zip(*shifted_iterators, strict=False)))
 
@@ -627,7 +717,7 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator over the remaining items.
 
         """
-        return Itr(itertools.islice(self._it, n, None))
+        return Itr(itertools.islice(_flushed(self), n, None))
 
     def skip_while(self, predicate: Predicate[T]) -> "Itr[T]":
         """Skip items in the iterator as long as the predicate is true.
@@ -639,7 +729,26 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator over the remaining items once the predicate first fails.
 
         """
-        return Itr(itertools.dropwhile(predicate, self._it))
+        return Itr(itertools.dropwhile(predicate, _flushed(self)))
+
+    def sorted_by(self, key: Callable[[T], Any], *, reverse: bool = False) -> "Itr[T]":
+        """Return an iterator over the items sorted by the given key function.
+
+        This method is **eager**: it consumes and materialises the whole iterator immediately (so it must not be
+        used on an infinite iterator). The sort is stable: items that compare equal retain their relative order.
+
+        Args:
+            key (Callable[[T], Any]): A function to extract a comparison key from each item.
+            reverse (bool): If True, sort in descending order. Defaults to False.
+
+        Returns:
+            Itr[T]: An iterator over the sorted items.
+
+        Example:
+            >>> Itr(["ccc", "a", "bb"]).sorted_by(len).collect()
+            ('a', 'bb', 'ccc')
+        """
+        return Itr(sorted(_flushed(self), key=key, reverse=reverse))
 
     def starmap[U](self, func: Callable[..., U]) -> "Itr[U]":
         """
@@ -656,7 +765,7 @@ class Itr[T](Iterator[T]):
             >>> list(itr.starmap(lambda x, y: x + y))
             [3, 7]
         """
-        return Itr(itertools.starmap(func, cast("Iterable[Iterable[Any]]", self._it)))
+        return Itr(itertools.starmap(func, cast("Iterable[Iterable[Any]]", _flushed(self))))
 
     def step_by(self, n: int) -> "Itr[T]":
         """Yield every n-th item from the iterator.
@@ -668,7 +777,21 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator yielding every n-th item.
 
         """
-        return Itr(itertools.islice(self._it, 0, None, n))
+        return Itr(itertools.islice(_flushed(self), 0, None, n))
+
+    def sum(self) -> T:
+        """Return the sum of all items in the iterator (0 if empty). NB Consumes the iterator.
+
+        The items must support addition with int (e.g. numbers; use `reduce` or `fold` for other types).
+
+        Returns:
+            T: The sum of all items.
+
+        Example:
+            >>> Itr([1, 2, 3]).sum()
+            6
+        """
+        return cast("T", sum(cast("Iterable[Any]", _flushed(self))))
 
     def take(self, n: int) -> "Itr[T]":
         """Return an iterator over the next n items from the iterator.
@@ -680,7 +803,7 @@ class Itr[T](Iterator[T]):
             Itr[T]: An iterator over the next n items.
 
         """
-        return Itr(itertools.islice(self._it, n))
+        return Itr(itertools.islice(_flushed(self), n))
 
     def take_while(self, predicate: Predicate[T]) -> "Itr[T]":
         """Yield items from the iterator as long as the given predicate is true.
@@ -692,7 +815,7 @@ class Itr[T](Iterator[T]):
             Itr[T]: A new Itr yielding items while the predicate is true.
 
         """
-        return Itr(itertools.takewhile(predicate, self._it))
+        return Itr(itertools.takewhile(predicate, _flushed(self)))
 
     def tee(self, n: int = 2) -> tuple["Itr[T]", ...]:
         """
@@ -717,7 +840,7 @@ class Itr[T](Iterator[T]):
           that store items produced by the original iterator until all tees have consumed them.
           If one or more returned iterators lag behind the others, buffered items will be
           retained and memory usage can grow.
-        - After calling this method, avoid consuming the original wrapped iterator (`self._it`)
+        - After calling this method, avoid consuming the original wrapped iterator
           directly; use the returned Itr objects to prevent surprising interactions with the
           shared buffer.
         - Creating the tees is inexpensive, but the memory characteristics depend on how the
@@ -733,7 +856,7 @@ class Itr[T](Iterator[T]):
         """
         if n < 1:
             raise ValueError(f"tee requires at least 1 iterator, got {n}")
-        return tuple(Itr(t) for t in itertools.tee(self._it, n))
+        return tuple(Itr(t) for t in itertools.tee(_flushed(self), n))
 
     def unzip[U, V](self: "Itr[tuple[U, V]]") -> tuple["Itr[U]", "Itr[V]"]:
         """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
@@ -748,7 +871,7 @@ class Itr[T](Iterator[T]):
             and then maps over each to extract the respective elements.
 
         """
-        it1, it2 = itertools.tee(self._it, 2)
+        it1, it2 = itertools.tee(_flushed(self), 2)
         return Itr(x[0] for x in it1), Itr(x[1] for x in it2)
 
     def value_counts(self) -> "Itr[tuple[T, int]]":
@@ -767,7 +890,7 @@ class Itr[T](Iterator[T]):
             >>> Itr("abracadabra").value_counts().collect()
             (('a', 5), ('b', 2), ('r', 2), ('c', 1), ('d', 1))
         """
-        return cast("Itr[tuple[T, int]]", Itr(Counter(self._it).most_common()))
+        return cast("Itr[tuple[T, int]]", Itr(Counter(_flushed(self)).most_common()))
 
     def zip[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """Yield pairs of items from this iterator and another iterable.
@@ -779,4 +902,28 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, U]]: An iterator of paired items.
 
         """
-        return cast("Itr[tuple[T, U]]", Itr(zip(self._it, other, strict=False)))
+        return cast("Itr[tuple[T, U]]", Itr(zip(_flushed(self), other, strict=False)))
+
+    def zip_longest[U, V](
+        self, other: Iterable[U], *, fillvalue: V | None = None
+    ) -> "Itr[tuple[T | V | None, U | V | None]]":
+        """Yield pairs of items from this iterator and another iterable, padding the shorter with `fillvalue`.
+
+        Unlike `zip`, iteration continues until the longer input is exhausted, with missing values replaced by
+        `fillvalue`.
+
+        Args:
+            other (Iterable[U]): The other iterable.
+            fillvalue (V | None): The value used to pad the shorter input. Defaults to None.
+
+        Returns:
+            Itr[tuple[T | V | None, U | V | None]]: An iterator of paired items.
+
+        Example:
+            >>> Itr([1, 2, 3]).zip_longest("ab", fillvalue="-").collect()
+            ((1, 'a'), (2, 'b'), (3, '-'))
+        """
+        return cast(
+            "Itr[tuple[T | V | None, U | V | None]]",
+            Itr(itertools.zip_longest(_flushed(self), other, fillvalue=fillvalue)),
+        )

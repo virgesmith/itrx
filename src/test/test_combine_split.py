@@ -170,6 +170,15 @@ def test_repeat_one() -> None:
     assert it.collect() == (4, 5)
 
 
+def test_repeat_one_returns_new_itr() -> None:
+    # repeat(1) behaves like any other n: a new Itr is returned and the original is left exhausted
+    it = Itr([4, 5])
+    repeated = it.repeat(1)
+    assert repeated is not it
+    assert repeated.collect() == (4, 5)
+    assert it.collect() == ()
+
+
 def test_repeat_empty_iterable() -> None:
     it: Itr[int] = Itr([]).repeat(3)
     # Repeating an empty iterable should yield nothing
@@ -422,3 +431,19 @@ def test_tee_iterators_are_distinct_objects() -> None:
     # ensure both still yield the same items
     assert list(a) == [7, 8, 9]
     assert list(b) == [7, 8, 9]
+
+
+def test_zip_longest_equal_length() -> None:
+    assert Itr([1, 2]).zip_longest("ab").collect() == ((1, "a"), (2, "b"))
+
+
+def test_zip_longest_left_longer() -> None:
+    assert Itr([1, 2, 3]).zip_longest("a").collect() == ((1, "a"), (2, None), (3, None))
+
+
+def test_zip_longest_right_longer_with_fillvalue() -> None:
+    assert Itr([1]).zip_longest("abc", fillvalue=0).collect() == ((1, "a"), (0, "b"), (0, "c"))
+
+
+def test_zip_longest_both_empty() -> None:
+    assert Itr[int]([]).zip_longest([]).collect() == ()

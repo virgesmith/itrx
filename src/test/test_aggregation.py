@@ -185,3 +185,32 @@ def test_value_counts_consumes_iterator() -> None:
     _ = itr.value_counts()
     with pytest.raises(StopIteration):
         itr.next()
+
+
+def test_sum() -> None:
+    assert Itr([1, 2, 3]).sum() == 6
+    assert Itr([1.5, 2.5]).sum() == 4.0
+
+
+def test_sum_empty() -> None:
+    assert Itr[int]([]).sum() == 0
+
+
+def test_sum_consumes_iterator() -> None:
+    it = Itr([1, 2, 3])
+    assert it.sum() == 6
+    with pytest.raises(StopIteration):
+        it.next()
+
+
+def test_prod() -> None:
+    assert Itr([2, 3, 4]).prod() == 24
+    assert Itr([0.5, 4.0]).prod() == 2.0
+
+
+def test_prod_empty() -> None:
+    assert Itr[int]([]).prod() == 1
+
+
+def test_prod_with_zero() -> None:
+    assert Itr([1, 0, 5]).prod() == 0

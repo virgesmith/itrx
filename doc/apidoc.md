@@ -167,6 +167,21 @@ Example:
     (1, 2, 3, 1, 2)
 
 
+### `dedup`
+
+Lazily remove *consecutive* duplicate items, keeping the first of each run (like Rust's `dedup`).
+
+Only adjacent duplicates are removed, so the result may still contain repeated values if they are not
+contiguous. Items are compared by equality and do not need to be hashable. Works on infinite iterators.
+
+Returns:
+    Itr[T]: An iterator over the items with consecutive duplicates removed.
+
+Example:
+    >>> Itr([1, 1, 2, 2, 2, 3, 1]).dedup().collect()
+    (1, 2, 3, 1)
+
+
 ### `enumerate`
 
 Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided
@@ -415,6 +430,31 @@ Returns:
 
 
 
+### `next_if`
+
+Consume and return the next item only if it satisfies the predicate (like Rust's `Peekable::next_if`).
+
+If the next item fails the predicate it is left in place (retrievable by a subsequent `next` or `peek`),
+and None is returned. None is also returned if the iterator is exhausted.
+
+Args:
+    predicate (Callable[[T], bool]): A function to test the next item.
+
+Returns:
+    T | None: The next item if it satisfies the predicate, otherwise None.
+
+Example:
+    >>> it = Itr([1, 2, 3])
+    >>> it.next_if(lambda x: x < 3)
+    1
+    >>> it.next_if(lambda x: x < 3)
+    2
+    >>> it.next_if(lambda x: x < 3) is None
+    True
+    >>> it.next()
+    3
+
+
 ### `nth`
 
 Return the n-th item (0-based) from the iterator, consuming the preceding items.
@@ -464,12 +504,23 @@ Returns:
 
 Returns the next element in the sequence without advancing the iterator.
 
+The element is held in a single-item lookahead buffer (like Rust's `Peekable`), so repeated calls are O(1)
+and return the same item until the iterator is advanced.
+
 Returns:
     T: The next element in the sequence.
 
-Note:
-    This method creates a copy of the iterator to avoid modifying the original iterator's state.
+Raises:
+    StopIteration: If the iterator is exhausted.
 
+Example:
+    >>> it = Itr([1, 2])
+    >>> it.peek(), it.peek()
+    (1, 1)
+    >>> it.next()
+    1
+    >>> it.peek()
+    2
 
 
 ### `position`
@@ -485,6 +536,20 @@ Returns:
 
 Raises:
     StopIteration: If no element satisfies the predicate.
+
+
+### `prod`
+
+Return the product of all items in the iterator (1 if empty). NB Consumes the iterator.
+
+The items must support multiplication (e.g. numbers).
+
+Returns:
+    T: The product of all items.
+
+Example:
+    >>> Itr([2, 3, 4]).prod()
+    24
 
 
 ### `product`
@@ -567,6 +632,25 @@ Returns:
 
 
 
+### `sorted_by`
+
+Return an iterator over the items sorted by the given key function.
+
+This method is **eager**: it consumes and materialises the whole iterator immediately (so it must not be
+used on an infinite iterator). The sort is stable: items that compare equal retain their relative order.
+
+Args:
+    key (Callable[[T], Any]): A function to extract a comparison key from each item.
+    reverse (bool): If True, sort in descending order. Defaults to False.
+
+Returns:
+    Itr[T]: An iterator over the sorted items.
+
+Example:
+    >>> Itr(["ccc", "a", "bb"]).sorted_by(len).collect()
+    ('a', 'bb', 'ccc')
+
+
 ### `starmap`
 
 
@@ -594,6 +678,20 @@ Args:
 Returns:
     Itr[T]: An iterator yielding every n-th item.
 
+
+
+### `sum`
+
+Return the sum of all items in the iterator (0 if empty). NB Consumes the iterator.
+
+The items must support addition with int (e.g. numbers; use `reduce` or `fold` for other types).
+
+Returns:
+    T: The sum of all items.
+
+Example:
+    >>> Itr([1, 2, 3]).sum()
+    6
 
 
 ### `take`
@@ -644,7 +742,7 @@ Notes:
   that store items produced by the original iterator until all tees have consumed them.
   If one or more returned iterators lag behind the others, buffered items will be
   retained and memory usage can grow.
-- After calling this method, avoid consuming the original wrapped iterator (`self._it`)
+- After calling this method, avoid consuming the original wrapped iterator
   directly; use the returned Itr objects to prevent surprising interactions with the
   shared buffer.
 - Creating the tees is inexpensive, but the memory characteristics depend on how the
@@ -702,4 +800,23 @@ Args:
 Returns:
     Itr[tuple[T, U]]: An iterator of paired items.
 
+
+
+### `zip_longest`
+
+Yield pairs of items from this iterator and another iterable, padding the shorter with `fillvalue`.
+
+Unlike `zip`, iteration continues until the longer input is exhausted, with missing values replaced by
+`fillvalue`.
+
+Args:
+    other (Iterable[U]): The other iterable.
+    fillvalue (V | None): The value used to pad the shorter input. Defaults to None.
+
+Returns:
+    Itr[tuple[T | V | None, U | V | None]]: An iterator of paired items.
+
+Example:
+    >>> Itr([1, 2, 3]).zip_longest("ab", fillvalue="-").collect()
+    ((1, 'a'), (2, 'b'), (3, '-'))
 
