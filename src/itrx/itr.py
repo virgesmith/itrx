@@ -19,6 +19,8 @@ class _Peekable[U](Iterator[U]):
     so anything consuming this iterator sees the full sequence.
     """
 
+    __slots__ = ("_it", "_peeked")
+
     def __init__(self, it: Iterable[U]) -> None:
         self._it = iter(it)
         self._peeked: Any = _MISSING
@@ -35,6 +37,17 @@ class _Peekable[U](Iterator[U]):
             self._peeked = next(self._it)
         return cast("U", self._peeked)
 
+    def unwrap(self) -> Iterator[U]:
+        """Return an iterator over the remaining items without the lookahead buffer.
+
+        Any buffered item is prepended, so no items are lost.
+        """
+        if self._peeked is _MISSING:
+            return self._it
+        item = cast("U", self._peeked)
+        self._peeked = _MISSING
+        return itertools.chain((item,), self._it)
+
 
 class Itr[T](Iterator[T]):
     """A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
@@ -48,7 +61,7 @@ class Itr[T](Iterator[T]):
             it (Iterable[T]): The iterable to wrap.
 
         """
-        self._it = _Peekable(it)
+        self._it = iter(it)
 
     def __iter__(self) -> Iterator[T]:
         "Implement the iter method of the Iterator protocol"
@@ -57,6 +70,16 @@ class Itr[T](Iterator[T]):
     def __next__(self) -> T:
         "Implement the next method of the Iterator protocol"
         return next(self._it)
+
+    def _peekable(self) -> _Peekable[T]:
+        """Wrap the underlying iterator in a lookahead buffer on first use.
+
+        Wrapping lazily keeps bulk iteration on the C fast path: pipelines that never peek pay no per-item cost
+        for the buffer.
+        """
+        if not isinstance(self._it, _Peekable):
+            self._it = _Peekable(self._it)
+        return cast("_Peekable[T]", self._it)
 
     def accumulate(self, func: Callable[[T, T], T] | None = None, *, initial: T | None = None) -> "Itr[T]":
         """
@@ -170,9 +193,8 @@ class Itr[T](Iterator[T]):
             Itr[T]: A new Itr instance wrapping one copy of the original iterator.
 
         """
-        it1, it2 = itertools.tee(self._it)
-        self._it = _Peekable(it1)
-        return Itr(it2)
+        self._it, it = itertools.tee(self._it)
+        return Itr(it)
 
     def count(self) -> int:
         """Count the number of remaining items in the iterator. NB Consumes the iterator.
@@ -542,7 +564,7 @@ class Itr[T](Iterator[T]):
             3
         """
         try:
-            item = self._it.peek()
+            item = self._peekable().peek()
         except StopIteration:
             return None
         if predicate(item):
@@ -618,7 +640,7 @@ class Itr[T](Iterator[T]):
             >>> it.peek()
             2
         """
-        return self._it.peek()
+        return self._peekable().peek()
 
     def position(self, predicate: Predicate[T]) -> int:
         """
@@ -862,6 +884,27 @@ class Itr[T](Iterator[T]):
         if n < 1:
             raise ValueError(f"tee requires at least 1 iterator, got {n}")
         return tuple(Itr(t) for t in itertools.tee(self._it, n))
+
+    def unpeek(self) -> "Itr[T]":
+        """Remove the lookahead buffer installed by `peek` or `next_if`, restoring direct iteration.
+
+        The buffer adds a small per-item overhead to all subsequent iteration of this Itr, so removing it when no
+        further lookahead is needed can speed up bulk consumption. Any pending peeked item is retained, and this
+        is a no-op if nothing has been peeked. Peeking again afterwards is safe: the buffer is simply reinstated.
+
+        Returns:
+            Itr[T]: self.
+
+        Example:
+            >>> it = Itr([1, 2, 3])
+            >>> it.peek()
+            1
+            >>> it.unpeek().collect()
+            (1, 2, 3)
+        """
+        if isinstance(self._it, _Peekable):
+            self._it = cast("Iterator[T]", self._it.unwrap())
+        return self
 
     def unzip[U, V](self: "Itr[tuple[U, V]]") -> tuple["Itr[U]", "Itr[V]"]:
         """Splits the iterator of pairs into two separate iterators, each containing the elements from one position of

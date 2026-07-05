@@ -13,10 +13,12 @@
 - `dedup()`: lazily remove *consecutive* duplicates, keeping the first of each run (like Rust's `dedup`); works on infinite iterators.
 - `zip_longest(other, fillvalue=...)`: like `zip`, but continues to the end of the longer input, padding with `fillvalue`.
 - `sorted_by(key, reverse=...)`: eager stable sort by a key function.
+- `unpeek()`: remove the lookahead buffer installed by `peek`/`next_if` (retaining any pending item), restoring direct iteration speed when no further lookahead is needed.
 
 ### Improvements
 
 - `peek` now uses a single-item lookahead buffer (like Rust's `Peekable`) instead of copying the iterator with `itertools.tee`, so repeated peeks are O(1) and no longer build up nested tee layers.
+- The lookahead buffer is now installed lazily, on the first call to `peek`/`next_if`, rather than wrapping every `Itr` unconditionally. Pipelines that never peek keep the previous C-fast-path iteration speed (the unconditional wrapper cost 2.5-7.5x on bulk operations).
 
 ### Bug fixes
 

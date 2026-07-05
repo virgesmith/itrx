@@ -757,6 +757,25 @@ Examples:
 [0, 1, 2]
 
 
+### `unpeek`
+
+Remove the lookahead buffer installed by `peek` or `next_if`, restoring direct iteration.
+
+The buffer adds a small per-item overhead to all subsequent iteration of this Itr, so removing it when no
+further lookahead is needed can speed up bulk consumption. Any pending peeked item is retained, and this
+is a no-op if nothing has been peeked. Peeking again afterwards is safe: the buffer is simply reinstated.
+
+Returns:
+    Itr[T]: self.
+
+Example:
+    >>> it = Itr([1, 2, 3])
+    >>> it.peek()
+    1
+    >>> it.unpeek().collect()
+    (1, 2, 3)
+
+
 ### `unzip`
 
 Splits the iterator of pairs into two separate iterators, each containing the elements from one position of

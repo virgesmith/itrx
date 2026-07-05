@@ -133,6 +133,31 @@ def test_peeked_item_seen_by_for_loop() -> None:
     assert list(it) == [1, 2, 3]
 
 
+def test_unpeek_retains_pending_item() -> None:
+    it = Itr([1, 2, 3])
+    assert it.peek() == 1
+    assert it.unpeek().collect() == (1, 2, 3)
+
+
+def test_unpeek_with_empty_buffer() -> None:
+    it = Itr([1, 2, 3])
+    assert it.peek() == 1
+    assert it.next() == 1  # drains the buffer
+    assert it.unpeek().collect() == (2, 3)
+
+
+def test_unpeek_without_peek_is_noop() -> None:
+    it = Itr([1, 2, 3])
+    assert it.unpeek().collect() == (1, 2, 3)
+
+
+def test_peek_after_unpeek() -> None:
+    it = Itr([1, 2, 3])
+    assert it.peek() == 1
+    assert it.unpeek().peek() == 1
+    assert it.collect() == (1, 2, 3)
+
+
 def test_next_if_consumes_on_match() -> None:
     it = Itr([1, 2, 3])
     assert it.next_if(lambda x: x < 3) == 1
