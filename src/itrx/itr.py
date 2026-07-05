@@ -1,5 +1,5 @@
 import itertools
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Callable, Generator, Iterable, Iterator
 from typing import Any, TypeVar, cast, overload
 
@@ -753,15 +753,21 @@ class Itr[T](Iterator[T]):
 
     def value_counts(self) -> "Itr[tuple[T, int]]":
         """
-        Returns an iterator over the number of times distinct items appear in the original iterator, which can be
-        collected into a dict.
+        Returns an iterator over the number of times distinct items appear in the original iterator, most common
+        first (like pandas' `value_counts`). Ties are ordered by first appearance. Items must be hashable, and the
+        result can be collected into a dict.
 
-        Do not use on an infinite iterator
+        This method is **eager**: it consumes the whole iterator immediately, so do not use it on an infinite
+        iterator.
 
         Returns:
-            Itr[tuple[T, int]]: An iterator of pairs of values and counts.
+            Itr[tuple[T, int]]: An iterator of (value, count) pairs in descending count order.
+
+        Example:
+            >>> Itr("abracadabra").value_counts().collect()
+            (('a', 5), ('b', 2), ('r', 2), ('c', 1), ('d', 1))
         """
-        return self.groupby(lambda x: x).map(lambda x: (x[0], len(x[1])))
+        return cast("Itr[tuple[T, int]]", Itr(Counter(self._it).most_common()))
 
     def zip[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """Yield pairs of items from this iterator and another iterable.

@@ -95,7 +95,7 @@ However, some methods are **eager consumers**. These methods iterate over and co
 
 *   **Collection methods:** `collect`, `last`, `next`, `next_chunk`, `nth`, `position`
 *   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `consume`, `find`, `fold`
-*   **Sorting/grouping:** `groupby` and `value_counts` sort the entire input up front, so they consume the whole iterator immediately and must not be used on infinite sources. Use the lazy `chunk_by` to group consecutive runs without sorting.
+*   **Sorting/grouping:** `groupby` sorts the entire input up front, and `value_counts` counts it (most common first, like pandas), so both consume the whole iterator immediately and must not be used on infinite sources. Use the lazy `chunk_by` to group consecutive runs without sorting.
 
 ### Important Considerations
 

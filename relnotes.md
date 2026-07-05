@@ -1,3 +1,14 @@
+## Unreleased
+
+### Breaking changes
+
+- `value_counts` now behaves like pandas' `value_counts`: results are ordered most-common-first (ties by first appearance) instead of sorted by key. Items now only need to be hashable rather than orderable, and counting is O(n) rather than O(n log n).
+- `tee` now raises `ValueError` when `n < 1`, as its docstring has always stated (previously `tee(0)` silently discarded the iterator and returned an empty tuple).
+
+### Bug fixes
+
+- Removed the broken `apidoc` console script from the distribution: the wheel does not package the `scripts` module, so the installed command always failed with `ModuleNotFoundError`. It is a dev-only tool, now run directly from the source tree.
+
 ## 0.3.0
 
 ### Breaking changes

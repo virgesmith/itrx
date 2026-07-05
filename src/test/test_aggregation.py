@@ -141,6 +141,20 @@ def test_value_counts_basic() -> None:
     assert result == {1: 2, 2: 3, 3: 1, 4: 1}
 
 
+def test_value_counts_most_common_first() -> None:
+    # like pandas: descending count, ties in first-appearance order
+    data = [1, 2, 2, 3, 1, 4, 2]
+    result = Itr(data).value_counts().collect()
+    assert result == ((2, 3), (1, 2), (3, 1), (4, 1))
+
+
+def test_value_counts_unorderable_items() -> None:
+    # items only need to be hashable, not orderable
+    data = [1j, 2j, 1j]
+    result = Itr(data).value_counts().collect()
+    assert result == ((1j, 2), (2j, 1))
+
+
 def test_value_counts_empty() -> None:
     data: list[int] = []
     result = Itr(data).value_counts().collect(dict)
