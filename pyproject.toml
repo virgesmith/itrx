@@ -38,9 +38,6 @@ examples = [
     "ipykernel",
 ]
 
-[project.scripts]
-apidoc = "scripts.introspect:main"
-
 [tool.pytest.ini_options]
 testpaths = [
   "."
