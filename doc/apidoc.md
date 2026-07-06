@@ -1,4 +1,4 @@
-# `Itr` v0.3.0 class documentation
+# `Itr` v0.4.0 class documentation
 A generic iterator adaptor class inspired by Rust's Iterator trait, providing a composable API for
 functional-style iteration and transformation over Python iterables.
 ## Public methods
