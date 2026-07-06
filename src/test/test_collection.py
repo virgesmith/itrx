@@ -97,8 +97,8 @@ def test_peek_repeated_is_stable() -> None:
     assert it.peek() == 2
 
 
-def test_peek_does_not_deepen_iterator() -> None:
-    # peek is O(1): it must not wrap the underlying iterator in a new layer on each call
+def test_peek_repeated_does_not_degrade() -> None:
+    # tee re-tees an already-teed iterator without nesting, so many peeks stay cheap and lossless
     it = Itr([1, 2])
     for _ in range(10000):
         assert it.peek() == 1
@@ -131,31 +131,6 @@ def test_peeked_item_seen_by_for_loop() -> None:
     it = Itr([1, 2, 3])
     assert it.peek() == 1
     assert list(it) == [1, 2, 3]
-
-
-def test_unpeek_retains_pending_item() -> None:
-    it = Itr([1, 2, 3])
-    assert it.peek() == 1
-    assert it.unpeek().collect() == (1, 2, 3)
-
-
-def test_unpeek_with_empty_buffer() -> None:
-    it = Itr([1, 2, 3])
-    assert it.peek() == 1
-    assert it.next() == 1  # drains the buffer
-    assert it.unpeek().collect() == (2, 3)
-
-
-def test_unpeek_without_peek_is_noop() -> None:
-    it = Itr([1, 2, 3])
-    assert it.unpeek().collect() == (1, 2, 3)
-
-
-def test_peek_after_unpeek() -> None:
-    it = Itr([1, 2, 3])
-    assert it.peek() == 1
-    assert it.unpeek().peek() == 1
-    assert it.collect() == (1, 2, 3)
 
 
 def test_next_if_consumes_on_match() -> None:

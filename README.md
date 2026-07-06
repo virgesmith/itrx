@@ -102,7 +102,7 @@ However, some methods are **eager consumers**. These methods iterate over and co
 When working with `Itr`, keep these points in mind:
 
 *   **Single-Pass Iterators:** Like all Python iterators, `Itr` instances (and their underlying iterators) can generally only be consumed once. If you need to process the same sequence multiple times, use methods like `copy()`, `cycle()`, or `repeat()` as necessary.
-*   **No Rewinding:** It's not possible to rewind an `Itr` to an earlier state. You can "preview" the next value using the `peek()` method, which holds the value in a single-item lookahead buffer (so repeated peeks are cheap), and conditionally consume it with `next_if()`.
+*   **No Rewinding:** It's not possible to rewind an `Itr` to an earlier state. You can "preview" the next value using the `peek()` method, and conditionally consume it with `next_if()`.
 *   **Infinite Iterators:** Be cautious with open-ended iterators (e.g., those from `itertools.count()` or custom generators). Eager evaluation methods (like `collect()`, `count()`, `reduce()`) will attempt to consume the entire sequence, potentially leading to infinite loops or out-of-memory errors if applied to an infinite source.
 
 ## API Reference

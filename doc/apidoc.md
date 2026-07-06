@@ -504,14 +504,15 @@ Returns:
 
 Returns the next element in the sequence without advancing the iterator.
 
-The element is held in a single-item lookahead buffer (like Rust's `Peekable`), so repeated calls are O(1)
-and return the same item until the iterator is advanced.
-
 Returns:
     T: The next element in the sequence.
 
 Raises:
     StopIteration: If the iterator is exhausted.
+
+Note:
+    This method copies the iterator to avoid modifying the original iterator's state. The copy is cheap
+    even for repeated peeks: `itertools.tee` re-tees an already-teed iterator without adding a layer.
 
 Example:
     >>> it = Itr([1, 2])
@@ -755,25 +756,6 @@ Examples:
 [0, 1, 2]
 >>> list(b)
 [0, 1, 2]
-
-
-### `unpeek`
-
-Remove the lookahead buffer installed by `peek` or `next_if`, restoring direct iteration.
-
-The buffer adds a small per-item overhead to all subsequent iteration of this Itr, so removing it when no
-further lookahead is needed can speed up bulk consumption. Any pending peeked item is retained, and this
-is a no-op if nothing has been peeked. Peeking again afterwards is safe: the buffer is simply reinstated.
-
-Returns:
-    Itr[T]: self.
-
-Example:
-    >>> it = Itr([1, 2, 3])
-    >>> it.peek()
-    1
-    >>> it.unpeek().collect()
-    (1, 2, 3)
 
 
 ### `unzip`
