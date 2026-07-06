@@ -88,21 +88,21 @@ Note:
 
 Most `Itr` methods are **lazy transformations**, meaning they return a new `Itr` instance without immediately processing any data. This allows for arbitrary chaining and efficient memory usage, as items are only processed as they are requested. In most cases, `Itr` simply acts as a convenient wrapper around `itertools`, enabling this left-to-right chaining syntax.
 
-- **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`, `intersperse`, `interleave`, `chunk_by`
-- **Transformation and filtering:** `accumulate`, `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`
+- **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`, `intersperse`, `interleave`, `chunk_by`, `zip_longest`
+- **Transformation and filtering:** `accumulate`, `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`, `dedup`
 
 However, some methods are **eager consumers**. These methods iterate over and consume the underlying data, returning concrete values, collections, or aggregates. Examples include:
 
-*   **Collection methods:** `collect`, `last`, `next`, `next_chunk`, `nth`, `position`
-*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `all`, `any`, `consume`, `find`, `fold`
-*   **Sorting/grouping:** `groupby` sorts the entire input up front, and `value_counts` counts it (most common first, like pandas), so both consume the whole iterator immediately and must not be used on infinite sources. Use the lazy `chunk_by` to group consecutive runs without sorting.
+*   **Collection methods:** `collect`, `last`, `next`, `next_chunk`, `next_if`, `nth`, `position`
+*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `sum`, `prod`, `all`, `any`, `consume`, `find`, `fold`
+*   **Sorting/grouping:** `sorted_by` and `groupby` sort the entire input up front, and `value_counts` counts it (most common first, like pandas), so all three consume the whole iterator immediately and must not be used on infinite sources. Use the lazy `chunk_by` to group consecutive runs without sorting.
 
 ### Important Considerations
 
 When working with `Itr`, keep these points in mind:
 
 *   **Single-Pass Iterators:** Like all Python iterators, `Itr` instances (and their underlying iterators) can generally only be consumed once. If you need to process the same sequence multiple times, use methods like `copy()`, `cycle()`, or `repeat()` as necessary.
-*   **No Rewinding:** It's not possible to rewind an `Itr` to an earlier state. You can "preview" the next value using the `peek()` method, but be aware that `peek()` often copies the iterator internally, which can be inefficient if used excessively.
+*   **No Rewinding:** It's not possible to rewind an `Itr` to an earlier state. You can "preview" the next value using the `peek()` method, and conditionally consume it with `next_if()`.
 *   **Infinite Iterators:** Be cautious with open-ended iterators (e.g., those from `itertools.count()` or custom generators). Eager evaluation methods (like `collect()`, `count()`, `reduce()`) will attempt to consume the entire sequence, potentially leading to infinite loops or out-of-memory errors if applied to an infinite source.
 
 ## API Reference

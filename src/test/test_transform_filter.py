@@ -206,3 +206,41 @@ def test_chunk_by_lazy_on_infinite() -> None:
     # chunk_by is lazy, so it works on unbounded iterators
     counts = Itr(itertools.count()).chunk_by(lambda n: n // 2).take(3).collect()
     assert counts == ((0, (0, 1)), (1, (2, 3)), (2, (4, 5)))
+
+
+def test_dedup() -> None:
+    assert Itr([1, 1, 2, 2, 2, 3, 1]).dedup().collect() == (1, 2, 3, 1)
+
+
+def test_dedup_no_duplicates() -> None:
+    assert Itr([1, 2, 3]).dedup().collect() == (1, 2, 3)
+
+
+def test_dedup_empty() -> None:
+    assert Itr[int]([]).dedup().collect() == ()
+
+
+def test_dedup_unhashable_items() -> None:
+    assert Itr([[1], [1], [2]]).dedup().collect() == ([1], [2])
+
+
+def test_dedup_lazy_on_infinite() -> None:
+    it = Itr(itertools.count()).flat_map(lambda x: (x, x)).dedup()
+    assert it.take(3).collect() == (0, 1, 2)
+
+
+def test_sorted_by() -> None:
+    assert Itr(["ccc", "a", "bb"]).sorted_by(len).collect() == ("a", "bb", "ccc")
+
+
+def test_sorted_by_reverse() -> None:
+    assert Itr([1, 3, 2]).sorted_by(lambda x: x, reverse=True).collect() == (3, 2, 1)
+
+
+def test_sorted_by_is_stable() -> None:
+    data = [(1, "b"), (0, "a"), (1, "a"), (0, "b")]
+    assert Itr(data).sorted_by(lambda x: x[0]).collect() == ((0, "a"), (0, "b"), (1, "b"), (1, "a"))
+
+
+def test_sorted_by_empty() -> None:
+    assert Itr[int]([]).sorted_by(lambda x: x).collect() == ()

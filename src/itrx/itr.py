@@ -1,4 +1,5 @@
 import itertools
+import math
 from collections import Counter, deque
 from collections.abc import Callable, Generator, Iterable, Iterator
 from typing import Any, TypeVar, cast, overload
@@ -50,9 +51,7 @@ class Itr[T](Iterator[T]):
             >>> list(Itr([2, 3, 4]).accumulate(lambda x, y: x * y))
             [2, 6, 24]
         """
-        return Itr(
-            itertools.accumulate(self._it, func, initial=initial)
-        )  # if func else itertools.accumulate(self._it))
+        return Itr(itertools.accumulate(self._it, func, initial=initial))
 
     def all(self, predicate: Predicate[T]) -> bool:
         """Return True if all elements in the iterator satisfy the predicate.
@@ -171,6 +170,21 @@ class Itr[T](Iterator[T]):
             (1, 2, 3, 1, 2)
         """
         return Itr(itertools.cycle(self._it))
+
+    def dedup(self) -> "Itr[T]":
+        """Lazily remove *consecutive* duplicate items, keeping the first of each run (like Rust's `dedup`).
+
+        Only adjacent duplicates are removed, so the result may still contain repeated values if they are not
+        contiguous. Items are compared by equality and do not need to be hashable. Works on infinite iterators.
+
+        Returns:
+            Itr[T]: An iterator over the items with consecutive duplicates removed.
+
+        Example:
+            >>> Itr([1, 1, 2, 2, 2, 3, 1]).dedup().collect()
+            (1, 2, 3, 1)
+        """
+        return Itr(k for k, _ in itertools.groupby(self._it))
 
     def enumerate(self, *, start: int = 0) -> "Itr[tuple[int, T]]":
         """Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided
@@ -477,6 +491,37 @@ class Itr[T](Iterator[T]):
         """
         return self.take(n).collect()
 
+    def next_if(self, predicate: Predicate[T]) -> T | None:
+        """Consume and return the next item only if it satisfies the predicate (like Rust's `Peekable::next_if`).
+
+        If the next item fails the predicate it is left in place (retrievable by a subsequent `next` or `peek`),
+        and None is returned. None is also returned if the iterator is exhausted.
+
+        Args:
+            predicate (Callable[[T], bool]): A function to test the next item.
+
+        Returns:
+            T | None: The next item if it satisfies the predicate, otherwise None.
+
+        Example:
+            >>> it = Itr([1, 2, 3])
+            >>> it.next_if(lambda x: x < 3)
+            1
+            >>> it.next_if(lambda x: x < 3)
+            2
+            >>> it.next_if(lambda x: x < 3) is None
+            True
+            >>> it.next()
+            3
+        """
+        try:
+            item = self.peek()
+        except StopIteration:
+            return None
+        if predicate(item):
+            return next(self._it)
+        return None
+
     def nth(self, n: int) -> T:
         """Return the n-th item (0-based) from the iterator, consuming the preceding items.
 
@@ -531,9 +576,21 @@ class Itr[T](Iterator[T]):
         Returns:
             T: The next element in the sequence.
 
-        Note:
-            This method creates a copy of the iterator to avoid modifying the original iterator's state.
+        Raises:
+            StopIteration: If the iterator is exhausted.
 
+        Note:
+            This method copies the iterator to avoid modifying the original iterator's state. The copy is cheap
+            even for repeated peeks: `itertools.tee` re-tees an already-teed iterator without adding a layer.
+
+        Example:
+            >>> it = Itr([1, 2])
+            >>> it.peek(), it.peek()
+            (1, 1)
+            >>> it.next()
+            1
+            >>> it.peek()
+            2
         """
         return self.copy().next()
 
@@ -551,6 +608,20 @@ class Itr[T](Iterator[T]):
             StopIteration: If no element satisfies the predicate.
         """
         return self.enumerate().skip_while(lambda x: not predicate(x[1])).next()[0]
+
+    def prod(self) -> T:
+        """Return the product of all items in the iterator (1 if empty). NB Consumes the iterator.
+
+        The items must support multiplication (e.g. numbers).
+
+        Returns:
+            T: The product of all items.
+
+        Example:
+            >>> Itr([2, 3, 4]).prod()
+            24
+        """
+        return cast("T", math.prod(cast("Iterable[Any]", self._it)))
 
     def product[U](self, other: Iterable[U]) -> "Itr[tuple[T, U]]":
         """
@@ -590,8 +661,6 @@ class Itr[T](Iterator[T]):
         Note:
             This implementation creates `n` independent iterators using `itertools.tee`, which may be inefficient for large `n` or large input iterators.
         """
-        if n == 1:
-            return self
         # this creates n iterators so may be inefficient
         return Itr(itertools.chain(*itertools.tee(self._it, n)))
 
@@ -641,6 +710,25 @@ class Itr[T](Iterator[T]):
         """
         return Itr(itertools.dropwhile(predicate, self._it))
 
+    def sorted_by(self, key: Callable[[T], Any], *, reverse: bool = False) -> "Itr[T]":
+        """Return an iterator over the items sorted by the given key function.
+
+        This method is **eager**: it consumes and materialises the whole iterator immediately (so it must not be
+        used on an infinite iterator). The sort is stable: items that compare equal retain their relative order.
+
+        Args:
+            key (Callable[[T], Any]): A function to extract a comparison key from each item.
+            reverse (bool): If True, sort in descending order. Defaults to False.
+
+        Returns:
+            Itr[T]: An iterator over the sorted items.
+
+        Example:
+            >>> Itr(["ccc", "a", "bb"]).sorted_by(len).collect()
+            ('a', 'bb', 'ccc')
+        """
+        return Itr(sorted(self._it, key=key, reverse=reverse))
+
     def starmap[U](self, func: Callable[..., U]) -> "Itr[U]":
         """
         Applies a function to the elements of the iterator, unpacking the elements as arguments.
@@ -669,6 +757,20 @@ class Itr[T](Iterator[T]):
 
         """
         return Itr(itertools.islice(self._it, 0, None, n))
+
+    def sum(self) -> T:
+        """Return the sum of all items in the iterator (0 if empty). NB Consumes the iterator.
+
+        The items must support addition with int (e.g. numbers; use `reduce` or `fold` for other types).
+
+        Returns:
+            T: The sum of all items.
+
+        Example:
+            >>> Itr([1, 2, 3]).sum()
+            6
+        """
+        return cast("T", sum(cast("Iterable[Any]", self._it)))
 
     def take(self, n: int) -> "Itr[T]":
         """Return an iterator over the next n items from the iterator.
@@ -717,7 +819,7 @@ class Itr[T](Iterator[T]):
           that store items produced by the original iterator until all tees have consumed them.
           If one or more returned iterators lag behind the others, buffered items will be
           retained and memory usage can grow.
-        - After calling this method, avoid consuming the original wrapped iterator (`self._it`)
+        - After calling this method, avoid consuming the original wrapped iterator
           directly; use the returned Itr objects to prevent surprising interactions with the
           shared buffer.
         - Creating the tees is inexpensive, but the memory characteristics depend on how the
@@ -780,3 +882,27 @@ class Itr[T](Iterator[T]):
 
         """
         return cast("Itr[tuple[T, U]]", Itr(zip(self._it, other, strict=False)))
+
+    def zip_longest[U, V](
+        self, other: Iterable[U], *, fillvalue: V | None = None
+    ) -> "Itr[tuple[T | V | None, U | V | None]]":
+        """Yield pairs of items from this iterator and another iterable, padding the shorter with `fillvalue`.
+
+        Unlike `zip`, iteration continues until the longer input is exhausted, with missing values replaced by
+        `fillvalue`.
+
+        Args:
+            other (Iterable[U]): The other iterable.
+            fillvalue (V | None): The value used to pad the shorter input. Defaults to None.
+
+        Returns:
+            Itr[tuple[T | V | None, U | V | None]]: An iterator of paired items.
+
+        Example:
+            >>> Itr([1, 2, 3]).zip_longest("ab", fillvalue="-").collect()
+            ((1, 'a'), (2, 'b'), (3, '-'))
+        """
+        return cast(
+            "Itr[tuple[T | V | None, U | V | None]]",
+            Itr(itertools.zip_longest(self._it, other, fillvalue=fillvalue)),
+        )

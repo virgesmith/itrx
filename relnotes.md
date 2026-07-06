@@ -1,9 +1,18 @@
-## Unreleased
+## 0.4.0
 
 ### Breaking changes
 
 - `value_counts` now behaves like pandas' `value_counts`: results are ordered most-common-first (ties by first appearance) instead of sorted by key. Items now only need to be hashable rather than orderable, and counting is O(n) rather than O(n log n).
 - `tee` now raises `ValueError` when `n < 1`, as its docstring has always stated (previously `tee(0)` silently discarded the iterator and returned an empty tuple).
+- `repeat(1)` now returns a new `Itr` and leaves the original exhausted, consistent with every other value of `n` (previously it returned `self`, so consuming the result also consumed the original in that case only).
+
+### New features
+
+- `next_if(predicate)`: consume and return the next item only if it satisfies the predicate, otherwise leave it in place and return `None` (like Rust's `Peekable::next_if`).
+- `sum()` / `prod()`: terminal aggregations over the remaining items.
+- `dedup()`: lazily remove *consecutive* duplicates, keeping the first of each run (like Rust's `dedup`); works on infinite iterators.
+- `zip_longest(other, fillvalue=...)`: like `zip`, but continues to the end of the longer input, padding with `fillvalue`.
+- `sorted_by(key, reverse=...)`: eager stable sort by a key function.
 
 ### Bug fixes
 

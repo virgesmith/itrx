@@ -87,3 +87,69 @@ def test_peek_on_empty_iterator_raises() -> None:
     it = Itr[bool]([])
     with pytest.raises(StopIteration):
         it.peek()
+
+
+def test_peek_repeated_is_stable() -> None:
+    it = Itr([1, 2])
+    assert it.peek() == 1
+    assert it.peek() == 1
+    assert it.next() == 1
+    assert it.peek() == 2
+
+
+def test_peek_repeated_does_not_degrade() -> None:
+    # tee re-tees an already-teed iterator without nesting, so many peeks stay cheap and lossless
+    it = Itr([1, 2])
+    for _ in range(10000):
+        assert it.peek() == 1
+    assert it.collect() == (1, 2)
+
+
+def test_peek_handles_none_values() -> None:
+    it = Itr([None, 1])
+    assert it.peek() is None
+    assert it.next() is None
+    assert it.next() == 1
+
+
+def test_peeked_item_seen_by_adaptors() -> None:
+    # the buffered item must be pushed back before any adaptor consumes the underlying iterator
+    it = Itr([1, 2, 3])
+    assert it.peek() == 1
+    assert it.map(lambda x: x * 10).collect() == (10, 20, 30)
+
+
+def test_peeked_item_seen_by_copy() -> None:
+    it = Itr([1, 2, 3])
+    assert it.peek() == 1
+    copied = it.copy()
+    assert copied.collect() == (1, 2, 3)
+    assert it.collect() == (1, 2, 3)
+
+
+def test_peeked_item_seen_by_for_loop() -> None:
+    it = Itr([1, 2, 3])
+    assert it.peek() == 1
+    assert list(it) == [1, 2, 3]
+
+
+def test_next_if_consumes_on_match() -> None:
+    it = Itr([1, 2, 3])
+    assert it.next_if(lambda x: x < 3) == 1
+    assert it.next_if(lambda x: x < 3) == 2
+    assert it.next_if(lambda x: x < 3) is None
+    # the non-matching item is not consumed
+    assert it.next() == 3
+
+
+def test_next_if_exhausted_returns_none() -> None:
+    it = Itr[int]([])
+    assert it.next_if(lambda _: True) is None
+
+
+def test_next_if_after_peek() -> None:
+    it = Itr([5, 6])
+    assert it.peek() == 5
+    assert it.next_if(lambda x: x == 5) == 5
+    assert it.next_if(lambda x: x == 5) is None
+    assert it.peek() == 6
