@@ -20,6 +20,9 @@ classifiers = [
 "Homepage" = "https://github.com/virgesmith/itrx"
 "Bug Tracker" = "https://github.com/virgesmith/itrx/issues"
 
+[project.scripts]
+itrx-skill = "itrx.skill_cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
