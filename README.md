@@ -24,6 +24,10 @@ Heavily inspired by Rust's [Iterator trait](https://doc.rust-lang.org/std/iter/t
 pip install itrx
 ```
 
+> **Using an AI coding agent?** `itrx` ships an installable [agent skill](#agent-skill) — run
+> `uv run itrx-skill --install` and your agent gets a built-in reference for writing `Itr` chains
+> correctly, without needing this whole README in context.
+
 ## Quick Start & Core Functionality
 
 ### Chaining
@@ -104,6 +108,27 @@ When working with `Itr`, keep these points in mind:
 *   **Single-Pass Iterators:** Like all Python iterators, `Itr` instances (and their underlying iterators) can generally only be consumed once. If you need to process the same sequence multiple times, use methods like `copy()`, `cycle()`, or `repeat()` as necessary.
 *   **No Rewinding:** It's not possible to rewind an `Itr` to an earlier state. You can "preview" the next value using the `peek()` method, and conditionally consume it with `next_if()`.
 *   **Infinite Iterators:** Be cautious with open-ended iterators (e.g., those from `itertools.count()` or custom generators). Eager evaluation methods (like `collect()`, `count()`, `reduce()`) will attempt to consume the entire sequence, potentially leading to infinite loops or out-of-memory errors if applied to an infinite source.
+
+## Agent skill
+
+`itrx` ships a `SKILL.md` for AI coding agents (e.g. Claude Code) covering the `Itr` API, the
+lazy/eager split described above, and the common pitfalls (single-pass iterators, infinite
+sources, `groupby` vs `chunk_by`), so an agent doesn't need this whole README in context to write
+correct `Itr` chains.
+
+Install it into a project as a symlink to the version installed in the current environment:
+
+```sh
+uv run itrx-skill --install [PATH]  # default PATH: .agents
+uv run itrx-skill --remove [PATH]   # default PATH: .agents
+```
+
+(Or, without `uv`, activate the virtualenv `itrx` is installed in and drop the `uv run` prefix —
+`itrx-skill` is a normal console-script entry point, so it's only on `PATH` while that environment
+is active.)
+
+This creates (or removes) `PATH/skills/itrx`, symlinked to the skill bundled inside the installed
+`itrx` package, so it always matches the version in use.
 
 ## API Reference
 

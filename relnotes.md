@@ -1,3 +1,9 @@
+## Unreleased
+
+### New features
+
+- Installable **agent skill**: the package now bundles a `SKILL.md` reference for AI coding agents, plus an `itrx-skill` console script to symlink it into a project (`itrx-skill --install [PATH]` / `--remove [PATH]`, default `PATH=.agents`, creating `PATH/skills/itrx`). The symlink points at the skill inside the installed `itrx`, so it always matches the version in use. See the "Agent skill" section of the README.
+
 ## 0.4.0
 
 ### Breaking changes
