@@ -3,6 +3,7 @@
 ### New features
 
 - Installable **agent skill**: the package now bundles a `SKILL.md` reference for AI coding agents, plus an `itrx-skill` console script to symlink it into a project (`itrx-skill --install [PATH]` / `--remove [PATH]`, default `PATH=.agents`, creating `PATH/skills/itrx`). The symlink points at the skill inside the installed `itrx`, so it always matches the version in use. See the "Agent skill" section of the README.
+- `dedup_with_count()`: the lazy, positional counterpart to `value_counts` — collapses each *consecutive* run of equal items into an `(item, count)` pair (run-length encoding), preserving order and working on infinite iterators. Note the `(item, count)` ordering matches `value_counts` and is the reverse of Rust's `dedup_with_count`.
 
 ## 0.4.0
 

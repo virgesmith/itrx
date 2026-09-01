@@ -186,6 +186,24 @@ class Itr[T](Iterator[T]):
         """
         return Itr(k for k, _ in itertools.groupby(self._it))
 
+    def dedup_with_count(self) -> "Itr[tuple[T, int]]":
+        """Lazily collapse each *consecutive* run of equal items into a (item, count) pair (run-length encoding).
+
+        The lazy, positional counterpart to `value_counts`: this counts adjacent runs and preserves order (so the
+        same item may appear more than once), where `value_counts` counts occurrences over the whole iterator and is
+        eager. Items are compared by equality and do not need to be hashable. Works on infinite iterators, provided
+        no individual run is infinite.
+
+        Returns:
+            Itr[tuple[T, int]]: An iterator of (item, run length) pairs.
+
+        Example:
+            >>> Itr([4, 4, 2, 3, 3, 1]).dedup_with_count().collect()
+            ((4, 2), (2, 1), (3, 2), (1, 1))
+        """
+        # note the (item, count) ordering matches value_counts, and is the reverse of Rust's dedup_with_count
+        return cast("Itr[tuple[T, int]]", Itr((k, sum(1 for _ in g)) for k, g in itertools.groupby(self._it)))
+
     def enumerate(self, *, start: int = 0) -> "Itr[tuple[int, T]]":
         """Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided
 

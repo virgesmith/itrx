@@ -182,6 +182,23 @@ Example:
     (1, 2, 3, 1)
 
 
+### `dedup_with_count`
+
+Lazily collapse each *consecutive* run of equal items into a (item, count) pair (run-length encoding).
+
+The lazy, positional counterpart to `value_counts`: this counts adjacent runs and preserves order (so the
+same item may appear more than once), where `value_counts` counts occurrences over the whole iterator and is
+eager. Items are compared by equality and do not need to be hashable. Works on infinite iterators, provided
+no individual run is infinite.
+
+Returns:
+    Itr[tuple[T, int]]: An iterator of (item, run length) pairs.
+
+Example:
+    >>> Itr([4, 4, 2, 3, 3, 1]).dedup_with_count().collect()
+    ((4, 2), (2, 1), (3, 2), (1, 1))
+
+
 ### `enumerate`
 
 Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided

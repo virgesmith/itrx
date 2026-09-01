@@ -48,7 +48,8 @@ equivalent `itertools` code, because it *is* that code underneath. Reach for it 
   new `Itr` and pulls items only on demand, so an infinite source stays workable right up to the
   terminal call.
 - **The operation exists in Rust's `Iterator` but not as a Python builtin** — `fold`, `inspect`,
-  `partition`, `position`, `intersperse`, `interleave`, `dedup`, `chunk_by`, `unzip`, `map_while`,
+  `partition`, `position`, `intersperse`, `interleave`, `dedup`, `dedup_with_count`, `chunk_by`,
+  `unzip`, `map_while`,
   `next_chunk`, `step_by`, `rolling`.
 
 Conversely, it is **not** worth it for a single `map`/`filter` (a comprehension is clearer), for
@@ -67,7 +68,8 @@ wrapping a **generator or iterator** hands over ownership: consuming the `Itr` c
 sources — with the exception of `product`, which materialises `other` up front like
 `itertools.product` does):
 
-`accumulate`, `batched`, `chain`, `chunk_by`, `copy`, `cycle`, `dedup`, `enumerate`, `filter`,
+`accumulate`, `batched`, `chain`, `chunk_by`, `copy`, `cycle`, `dedup`, `dedup_with_count`,
+`enumerate`, `filter`,
 `flat_map`, `flatten`, `inspect`, `interleave`, `intersperse`, `map`, `map_dict`, `map_while`,
 `pairwise`, `partition`, `product`, `repeat`, `rolling`, `skip`, `skip_while`, `step_by`, `take`,
 `take_while`, `tee`, `unzip`, `zip`, `zip_longest`
@@ -126,6 +128,14 @@ infinite source. `collect`, `count`, `last`, `consume`, `fold`, `reduce`, `sum`,
 - **`dedup()` removes only *adjacent* duplicates**, keeping the first of each run. It compares by
   equality (items need not be hashable) and stays lazy — it is not "unique". For global
   uniqueness use `collect(set)`, accepting the loss of order.
+- **`dedup_with_count()` is run-length encoding** — the same adjacent-run logic as `dedup`, but
+  yielding `(item, count)` pairs. It is the lazy, positional counterpart to `value_counts`: same
+  output shape, but counting adjacent runs in source order rather than occurrences overall. On
+  `[4, 4, 2, 3, 3, 1]` it gives `((4, 2), (2, 1), (3, 2), (1, 1))` where `value_counts()` gives
+  `((4, 2), (3, 2), (2, 1), (1, 1))`. Prefer it to
+  `chunk_by(f).map(lambda kv: (kv[0], len(kv[1])))`, which materialises every run to measure it.
+  Note the `(item, count)` order is the reverse of Rust's `dedup_with_count`. It stays lazy on an
+  infinite source, but an infinite individual run (e.g. `itertools.repeat(1)`) will hang.
 - **`rev()` materialises the entire remaining sequence** into memory before yielding — unavoidable,
   but never call it on an unbounded source.
 - **`repeat(n)` tees the iterator `n` times**, so it buffers the whole sequence for large `n`; it
