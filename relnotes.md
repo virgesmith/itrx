@@ -4,6 +4,9 @@
 
 - Installable **agent skill**: the package now bundles a `SKILL.md` reference for AI coding agents, plus an `itrx-skill` console script to symlink it into a project (`itrx-skill --install [PATH]` / `--remove [PATH]`, default `PATH=.agents`, creating `PATH/skills/itrx`). The symlink points at the skill inside the installed `itrx`, so it always matches the version in use. See the "Agent skill" section of the README.
 - `dedup_with_count()`: the lazy, positional counterpart to `value_counts` — collapses each *consecutive* run of equal items into an `(item, count)` pair (run-length encoding), preserving order and working on infinite iterators. Note the `(item, count)` ordering matches `value_counts` and is the reverse of Rust's `dedup_with_count`.
+- `scan(init, func)`: lazily map items through a running state, optionally stopping early (Rust's `Iterator::scan`). Generalises `accumulate`: the state need not share the items' type, and returning `None` halts iteration. Returning `(new_state, None)` still yields `None` as an output, so the halt signal is never ambiguous.
+- `is_sorted(key=None, *, reverse=False)`: check whether the remaining items are in order, short-circuiting at the first inversion. Non-strict, so equal runs count as sorted. Covers Rust's `is_sorted` and `is_sorted_by_key`, and adds `reverse` for symmetry with `sorted_by`.
+- `eq(other)`: element-wise comparison against another iterable, short-circuiting at the first difference instead of materialising both sides (Rust's `Iterator::eq`). Note `Itr` defines no `__eq__`, so `==` remains an identity check.
 
 ## 0.4.0
 

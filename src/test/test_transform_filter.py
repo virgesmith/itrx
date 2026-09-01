@@ -282,3 +282,32 @@ def test_sorted_by_is_stable() -> None:
 
 def test_sorted_by_empty() -> None:
     assert Itr[int]([]).sorted_by(lambda x: x).collect() == ()
+
+
+def test_scan() -> None:
+    assert Itr([1, 2, 3, 4]).scan(0, lambda total, x: (total + x, total + x)).collect() == (1, 3, 6, 10)
+
+
+def test_scan_stops_on_none() -> None:
+    result = Itr([1, 2, 3, 4]).scan(0, lambda total, x: None if total + x > 5 else (total + x, total + x))
+    assert result.collect() == (1, 3)
+
+
+def test_scan_empty() -> None:
+    assert Itr[int]([]).scan(0, lambda total, x: (total + x, total + x)).collect() == ()
+
+
+def test_scan_state_type_differs_from_output() -> None:
+    # state is a running count, output is the item tagged with its 1-based position
+    result = Itr("abc").scan(0, lambda n, c: (n + 1, f"{n + 1}{c}"))
+    assert result.collect() == ("1a", "2b", "3c")
+
+
+def test_scan_can_yield_none_outputs() -> None:
+    # None is only a halt signal as the whole return value, not as an output
+    assert Itr([1, 2]).scan(0, lambda total, x: (total + x, None)).collect() == (None, None)
+
+
+def test_scan_lazy_on_infinite() -> None:
+    running = Itr(itertools.count(1)).scan(0, lambda total, x: (total + x, total + x))
+    assert running.take(4).collect() == (1, 3, 6, 10)

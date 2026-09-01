@@ -208,6 +208,28 @@ Returns:
 
 
 
+### `eq`
+
+Compare the remaining items with another iterable, element by element (like Rust's `Iterator::eq`).
+
+Returns True only if both yield equal items in the same order and have the same length. Comparison
+short-circuits at the first difference, so unlike `tuple(a) == tuple(b)` neither side is fully materialised.
+NB This consumes as much of the iterator as it needs to. Note that `Itr` does not define `__eq__`, so `==`
+compares identity, not contents.
+
+Args:
+    other (Iterable[Any]): The iterable to compare against.
+
+Returns:
+    bool: True if the sequences are element-wise equal.
+
+Example:
+    >>> Itr([1, 2, 3]).eq([1, 2, 3])
+    True
+    >>> Itr([1, 2, 3]).eq([1, 2])
+    False
+
+
 ### `filter`
 
 Yield only items that satisfy the predicate.
@@ -345,6 +367,28 @@ Args:
 Returns:
     Itr[T | U]: An iterator with the item interspersed.
 
+
+
+### `is_sorted`
+
+Check whether the remaining items are in sorted order (like Rust's `Iterator::is_sorted`).
+
+Order is non-strict, so runs of equal items are sorted. An empty or single-item iterator is sorted. The
+check short-circuits at the first item out of order, but NB it consumes the iterator either way.
+
+Args:
+    key (Callable[[T], Any] | None): Applied to each item before comparison, as in `sorted_by` (covering
+        Rust's `is_sorted_by_key`). Defaults to comparing the items themselves.
+    reverse (bool): If True, check for descending rather than ascending order.
+
+Returns:
+    bool: True if the items are in the expected order.
+
+Example:
+    >>> Itr([1, 2, 2, 3]).is_sorted()
+    True
+    >>> Itr(["ccc", "bb", "a"]).is_sorted(len, reverse=True)
+    True
 
 
 ### `last`
@@ -624,6 +668,29 @@ Returns:
 
 Rolling window (generalisation of pairwise)
 Rather than copying the iterator multiple times, collect n, yield the sequence and incrementally drop/add
+
+
+### `scan`
+
+Lazily map items through a running state, optionally stopping early (like Rust's `Iterator::scan`).
+
+`func` receives the current state and the next item, and returns either a `(new_state, output)` pair or
+None to stop iterating. This generalises `accumulate`: the state need not be the same type as the items,
+and iteration can terminate on a condition. Yielding None as an *output* is unambiguous, since the halt
+signal is the entire return value rather than the output value.
+
+Args:
+    init (S): The initial state.
+    func (Callable[[S, T], tuple[S, U] | None]): Maps (state, item) to (new state, output), or None to stop.
+
+Returns:
+    Itr[U]: An iterator over the outputs.
+
+Example:
+    >>> Itr([1, 2, 3, 4]).scan(0, lambda total, x: (total + x, total + x)).collect()
+    (1, 3, 6, 10)
+    >>> Itr([1, 2, 3, 4]).scan(0, lambda total, x: None if total + x > 5 else (total + x, total + x)).collect()
+    (1, 3)
 
 
 ### `skip`

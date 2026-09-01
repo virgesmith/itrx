@@ -93,12 +93,12 @@ Note:
 Most `Itr` methods are **lazy transformations**, meaning they return a new `Itr` instance without immediately processing any data. This allows for arbitrary chaining and efficient memory usage, as items are only processed as they are requested. In most cases, `Itr` simply acts as a convenient wrapper around `itertools`, enabling this left-to-right chaining syntax.
 
 - **Combining and splitting:**  `partition`, `copy`, `batched`, `pairwise`, `rolling`, `chain`, `cycle`, `repeat`, `product`, `inspect`, `intersperse`, `interleave`, `chunk_by`, `zip_longest`
-- **Transformation and filtering:** `accumulate`, `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`, `dedup`, `dedup_with_count`
+- **Transformation and filtering:** `accumulate`, `filter`, `map`, `starmap`, `map_while`, `flatten`, `flat_map`, `skip_while`, `take_while`, `dedup`, `dedup_with_count`, `scan`
 
 However, some methods are **eager consumers**. These methods iterate over and consume the underlying data, returning concrete values, collections, or aggregates. Examples include:
 
 *   **Collection methods:** `collect`, `last`, `next`, `next_chunk`, `next_if`, `nth`, `position`
-*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `sum`, `prod`, `all`, `any`, `consume`, `find`, `fold`
+*   **Aggregation methods:** `count`, `reduce`, `max`, `min`, `sum`, `prod`, `all`, `any`, `consume`, `find`, `fold`, `eq`, `is_sorted`
 *   **Sorting/grouping:** `sorted_by` and `groupby` sort the entire input up front, and `value_counts` counts it (most common first, like pandas), so all three consume the whole iterator immediately and must not be used on infinite sources. Use the lazy `chunk_by` to group consecutive runs without sorting.
 
 ### Important Considerations
