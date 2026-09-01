@@ -25,8 +25,16 @@ Itr(range(100)).rev().step_by(4).skip(10).map(lambda x: x * x).filter(lambda x: 
 anywhere an iterator is accepted — `for x in itr`, `list(itr)`, `sum(itr)`, or as the `other`
 argument to `zip`/`chain` on another `Itr`.
 
-This skill is a quick reference. The canonical docs are the project's `README.md` and the
-generated `doc/apidoc.md`, which carries every method's full signature and docstring.
+This skill is a quick reference, not the full API. For a method's exact signature, parameters,
+raises and doctest, consult the generated per-method reference:
+
+<https://github.com/virgesmith/itrx/blob/main/doc/apidoc.md>
+
+Read it whenever you need a detail this file doesn't state — it is generated from the source
+docstrings and covers every public method. Note it tracks `main`, so it may describe methods
+newer than the installed version; `Itr.<method>.__doc__` (or `help(Itr.<method>)`) is the
+authoritative check for what the *installed* version actually has. In a checkout of the itrx repo
+itself the same file is at `doc/apidoc.md`, and the narrative docs are in `README.md`.
 
 ## When reaching for `Itr` is worth it
 
