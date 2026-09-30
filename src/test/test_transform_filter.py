@@ -229,6 +229,44 @@ def test_dedup_lazy_on_infinite() -> None:
     assert it.take(3).collect() == (0, 1, 2)
 
 
+def test_dedup_with_count() -> None:
+    assert Itr([4, 4, 2, 3, 3, 1]).dedup_with_count().collect() == ((4, 2), (2, 1), (3, 2), (1, 1))
+
+
+def test_dedup_with_count_no_duplicates() -> None:
+    assert Itr([1, 2, 3]).dedup_with_count().collect() == ((1, 1), (2, 1), (3, 1))
+
+
+def test_dedup_with_count_empty() -> None:
+    assert Itr[int]([]).dedup_with_count().collect() == ()
+
+
+def test_dedup_with_count_single_run() -> None:
+    assert Itr([7, 7, 7, 7]).dedup_with_count().collect() == ((7, 4),)
+
+
+def test_dedup_with_count_unhashable_items() -> None:
+    assert Itr([[1], [1], [2]]).dedup_with_count().collect() == (([1], 2), ([2], 1))
+
+
+def test_dedup_with_count_lazy_on_infinite() -> None:
+    it = Itr(itertools.count()).flat_map(lambda x: (x, x)).dedup_with_count()
+    assert it.take(3).collect() == ((0, 2), (1, 2), (2, 2))
+
+
+def test_dedup_with_count_keys_match_dedup() -> None:
+    data = [1, 1, 2, 2, 2, 3, 1]
+    counted = Itr(data).dedup_with_count().starmap(lambda item, _n: item).collect()
+    assert counted == Itr(data).dedup().collect()
+
+
+def test_dedup_with_count_differs_from_value_counts() -> None:
+    # dedup_with_count counts adjacent runs positionally, value_counts counts occurrences overall
+    data = [4, 4, 2, 3, 3, 1]
+    assert Itr(data).dedup_with_count().collect() == ((4, 2), (2, 1), (3, 2), (1, 1))
+    assert Itr(data).value_counts().collect() == ((4, 2), (3, 2), (2, 1), (1, 1))
+
+
 def test_sorted_by() -> None:
     assert Itr(["ccc", "a", "bb"]).sorted_by(len).collect() == ("a", "bb", "ccc")
 
@@ -244,3 +282,32 @@ def test_sorted_by_is_stable() -> None:
 
 def test_sorted_by_empty() -> None:
     assert Itr[int]([]).sorted_by(lambda x: x).collect() == ()
+
+
+def test_scan() -> None:
+    assert Itr([1, 2, 3, 4]).scan(0, lambda total, x: (total + x, total + x)).collect() == (1, 3, 6, 10)
+
+
+def test_scan_stops_on_none() -> None:
+    result = Itr([1, 2, 3, 4]).scan(0, lambda total, x: None if total + x > 5 else (total + x, total + x))
+    assert result.collect() == (1, 3)
+
+
+def test_scan_empty() -> None:
+    assert Itr[int]([]).scan(0, lambda total, x: (total + x, total + x)).collect() == ()
+
+
+def test_scan_state_type_differs_from_output() -> None:
+    # state is a running count, output is the item tagged with its 1-based position
+    result = Itr("abc").scan(0, lambda n, c: (n + 1, f"{n + 1}{c}"))
+    assert result.collect() == ("1a", "2b", "3c")
+
+
+def test_scan_can_yield_none_outputs() -> None:
+    # None is only a halt signal as the whole return value, not as an output
+    assert Itr([1, 2]).scan(0, lambda total, x: (total + x, None)).collect() == (None, None)
+
+
+def test_scan_lazy_on_infinite() -> None:
+    running = Itr(itertools.count(1)).scan(0, lambda total, x: (total + x, total + x))
+    assert running.take(4).collect() == (1, 3, 6, 10)

@@ -186,6 +186,24 @@ class Itr[T](Iterator[T]):
         """
         return Itr(k for k, _ in itertools.groupby(self._it))
 
+    def dedup_with_count(self) -> "Itr[tuple[T, int]]":
+        """Lazily collapse each *consecutive* run of equal items into a (item, count) pair (run-length encoding).
+
+        The lazy, positional counterpart to `value_counts`: this counts adjacent runs and preserves order (so the
+        same item may appear more than once), where `value_counts` counts occurrences over the whole iterator and is
+        eager. Items are compared by equality and do not need to be hashable. Works on infinite iterators, provided
+        no individual run is infinite.
+
+        Returns:
+            Itr[tuple[T, int]]: An iterator of (item, run length) pairs.
+
+        Example:
+            >>> Itr([4, 4, 2, 3, 3, 1]).dedup_with_count().collect()
+            ((4, 2), (2, 1), (3, 2), (1, 1))
+        """
+        # note the (item, count) ordering matches value_counts, and is the reverse of Rust's dedup_with_count
+        return cast("Itr[tuple[T, int]]", Itr((k, sum(1 for _ in g)) for k, g in itertools.groupby(self._it)))
+
     def enumerate(self, *, start: int = 0) -> "Itr[tuple[int, T]]":
         """Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided
 
@@ -194,6 +212,29 @@ class Itr[T](Iterator[T]):
 
         """
         return cast("Itr[tuple[int, T]]", Itr(enumerate(self._it, start)))
+
+    def eq(self, other: Iterable[Any]) -> bool:
+        """Compare the remaining items with another iterable, element by element (like Rust's `Iterator::eq`).
+
+        Returns True only if both yield equal items in the same order and have the same length. Comparison
+        short-circuits at the first difference, so unlike `tuple(a) == tuple(b)` neither side is fully materialised.
+        NB This consumes as much of the iterator as it needs to. Note that `Itr` does not define `__eq__`, so `==`
+        compares identity, not contents.
+
+        Args:
+            other (Iterable[Any]): The iterable to compare against.
+
+        Returns:
+            bool: True if the sequences are element-wise equal.
+
+        Example:
+            >>> Itr([1, 2, 3]).eq([1, 2, 3])
+            True
+            >>> Itr([1, 2, 3]).eq([1, 2])
+            False
+        """
+        unequal = object()
+        return all(a == b for a, b in itertools.zip_longest(self._it, other, fillvalue=unequal))
 
     def filter(self, predicate: Predicate[T]) -> "Itr[T]":
         """Yield only items that satisfy the predicate.
@@ -389,6 +430,31 @@ class Itr[T](Iterator[T]):
                         yield cast("T | U", item)
 
         return cast("Itr[T | U]", Itr(interleaver()))
+
+    def is_sorted(self, key: Callable[[T], Any] | None = None, *, reverse: bool = False) -> bool:
+        """Check whether the remaining items are in sorted order (like Rust's `Iterator::is_sorted`).
+
+        Order is non-strict, so runs of equal items are sorted. An empty or single-item iterator is sorted. The
+        check short-circuits at the first item out of order, but NB it consumes the iterator either way.
+
+        Args:
+            key (Callable[[T], Any] | None): Applied to each item before comparison, as in `sorted_by` (covering
+                Rust's `is_sorted_by_key`). Defaults to comparing the items themselves.
+            reverse (bool): If True, check for descending rather than ascending order.
+
+        Returns:
+            bool: True if the items are in the expected order.
+
+        Example:
+            >>> Itr([1, 2, 2, 3]).is_sorted()
+            True
+            >>> Itr(["ccc", "bb", "a"]).is_sorted(len, reverse=True)
+            True
+        """
+        # T is unbounded so is not known to be orderable, as in sorted_by/groupby
+        keyed = cast("Iterable[Any]", self._it if key is None else (key(item) for item in self._it))
+        pairs = itertools.pairwise(keyed)
+        return all(b <= a for a, b in pairs) if reverse else all(a <= b for a, b in pairs)
 
     def last(self) -> T:
         """Return the last item from the iterator. Do not use on an open-ended Iterable
@@ -685,6 +751,39 @@ class Itr[T](Iterator[T]):
         iterators = itertools.tee(self._it, n)
         shifted_iterators = (itertools.islice(it, i, None) for i, it in enumerate(iterators))
         return cast("Itr[tuple[T, ...]]", Itr(zip(*shifted_iterators, strict=False)))
+
+    def scan[S, U](self, init: S, func: Callable[[S, T], tuple[S, U] | None]) -> "Itr[U]":
+        """Lazily map items through a running state, optionally stopping early (like Rust's `Iterator::scan`).
+
+        `func` receives the current state and the next item, and returns either a `(new_state, output)` pair or
+        None to stop iterating. This generalises `accumulate`: the state need not be the same type as the items,
+        and iteration can terminate on a condition. Yielding None as an *output* is unambiguous, since the halt
+        signal is the entire return value rather than the output value.
+
+        Args:
+            init (S): The initial state.
+            func (Callable[[S, T], tuple[S, U] | None]): Maps (state, item) to (new state, output), or None to stop.
+
+        Returns:
+            Itr[U]: An iterator over the outputs.
+
+        Example:
+            >>> Itr([1, 2, 3, 4]).scan(0, lambda total, x: (total + x, total + x)).collect()
+            (1, 3, 6, 10)
+            >>> Itr([1, 2, 3, 4]).scan(0, lambda total, x: None if total + x > 5 else (total + x, total + x)).collect()
+            (1, 3)
+        """
+
+        def gen() -> Generator[U, None, None]:
+            state = init
+            for item in self._it:
+                result = func(state, item)
+                if result is None:
+                    return
+                state, output = result
+                yield output
+
+        return Itr(gen())
 
     def skip(self, n: int) -> "Itr[T]":
         """Skip the next n items in the iterator.

@@ -1,3 +1,4 @@
+import itertools
 from operator import add, mul, sub, truediv
 
 import pytest
@@ -214,3 +215,58 @@ def test_prod_empty() -> None:
 
 def test_prod_with_zero() -> None:
     assert Itr([1, 0, 5]).prod() == 0
+
+
+def test_eq() -> None:
+    assert Itr([1, 2, 3]).eq([1, 2, 3])
+    assert not Itr([1, 2, 3]).eq([1, 2, 4])
+
+
+def test_eq_empty() -> None:
+    assert Itr[int]([]).eq([])
+    assert not Itr[int]([]).eq([1])
+
+
+def test_eq_differing_lengths() -> None:
+    assert not Itr([1, 2, 3]).eq([1, 2])
+    assert not Itr([1, 2]).eq([1, 2, 3])
+
+
+def test_eq_accepts_any_iterable() -> None:
+    assert Itr("abc").eq(iter("abc"))
+    assert Itr([1, 2, 3]).eq(Itr(range(1, 4)))
+
+
+def test_eq_short_circuits_on_infinite() -> None:
+    # differs at the third item, so neither side is exhausted
+    assert not Itr(itertools.count()).eq(itertools.chain([0, 1], [99]))
+
+
+def test_is_sorted() -> None:
+    assert Itr([1, 2, 3]).is_sorted()
+    assert not Itr([1, 3, 2]).is_sorted()
+
+
+def test_is_sorted_allows_equal_items() -> None:
+    assert Itr([1, 2, 2, 3]).is_sorted()
+
+
+def test_is_sorted_empty_and_single() -> None:
+    assert Itr[int]([]).is_sorted()
+    assert Itr([5]).is_sorted()
+
+
+def test_is_sorted_with_key() -> None:
+    assert Itr(["a", "bb", "ccc"]).is_sorted(len)
+    assert not Itr(["ccc", "a"]).is_sorted(len)
+
+
+def test_is_sorted_reverse() -> None:
+    assert Itr([3, 2, 1]).is_sorted(reverse=True)
+    assert not Itr([1, 2, 3]).is_sorted(reverse=True)
+    assert Itr(["ccc", "bb", "a"]).is_sorted(len, reverse=True)
+
+
+def test_is_sorted_agrees_with_sorted_by() -> None:
+    data = ["ccc", "a", "bb"]
+    assert Itr(data).sorted_by(len).is_sorted(len)

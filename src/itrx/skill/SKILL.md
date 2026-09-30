@@ -48,8 +48,8 @@ equivalent `itertools` code, because it *is* that code underneath. Reach for it 
   new `Itr` and pulls items only on demand, so an infinite source stays workable right up to the
   terminal call.
 - **The operation exists in Rust's `Iterator` but not as a Python builtin** — `fold`, `inspect`,
-  `partition`, `position`, `intersperse`, `interleave`, `dedup`, `chunk_by`, `unzip`, `map_while`,
-  `next_chunk`, `step_by`, `rolling`.
+  `partition`, `position`, `intersperse`, `interleave`, `dedup`, `dedup_with_count`, `chunk_by`,
+  `unzip`, `map_while`, `scan`, `is_sorted`, `eq`, `next_chunk`, `step_by`, `rolling`.
 
 Conversely, it is **not** worth it for a single `map`/`filter` (a comprehension is clearer), for
 code already dominated by numpy/pandas vectorised calls, or where the data is a materialised
@@ -67,22 +67,25 @@ wrapping a **generator or iterator** hands over ownership: consuming the `Itr` c
 sources — with the exception of `product`, which materialises `other` up front like
 `itertools.product` does):
 
-`accumulate`, `batched`, `chain`, `chunk_by`, `copy`, `cycle`, `dedup`, `enumerate`, `filter`,
+`accumulate`, `batched`, `chain`, `chunk_by`, `copy`, `cycle`, `dedup`, `dedup_with_count`,
+`enumerate`, `filter`,
 `flat_map`, `flatten`, `inspect`, `interleave`, `intersperse`, `map`, `map_dict`, `map_while`,
-`pairwise`, `partition`, `product`, `repeat`, `rolling`, `skip`, `skip_while`, `step_by`, `take`,
+`pairwise`, `partition`, `product`, `repeat`, `rolling`, `scan`, `skip`, `skip_while`,
+`step_by`, `take`,
 `take_while`, `tee`, `unzip`, `zip`, `zip_longest`
 
 **Eager** (consume the iterator, return a concrete value; **never** on an infinite source):
 
 - Collection: `collect`, `last`, `next`, `next_chunk`, `next_if`, `nth`, `position`, `peek`
-- Aggregation: `all`, `any`, `consume`, `count`, `find`, `fold`, `for_each`, `max`, `min`, `prod`,
-  `reduce`, `sum`
+- Aggregation: `all`, `any`, `consume`, `count`, `eq`, `find`, `fold`, `for_each`, `is_sorted`,
+  `max`, `min`, `prod`, `reduce`, `sum`
 - Whole-input reordering: `groupby`, `sorted_by`, `value_counts`, `rev`
 
 Note that some of these consume only as far as they need to: `next`, `next_chunk`, `nth`,
 `next_if`, `peek`, `find`, `position`, `any` and `all` short-circuit, so they *are* safe on an
 infinite source. `collect`, `count`, `last`, `consume`, `fold`, `reduce`, `sum`, `prod`, `max`,
-`min`, `for_each`, `rev`, `groupby`, `sorted_by` and `value_counts` are not.
+`min`, `for_each`, `rev`, `groupby`, `sorted_by` and `value_counts` are not. `eq` and `is_sorted`
+short-circuit on the first difference or inversion, so they too are safe on an infinite source.
 
 ## Outputs
 
@@ -126,6 +129,14 @@ infinite source. `collect`, `count`, `last`, `consume`, `fold`, `reduce`, `sum`,
 - **`dedup()` removes only *adjacent* duplicates**, keeping the first of each run. It compares by
   equality (items need not be hashable) and stays lazy — it is not "unique". For global
   uniqueness use `collect(set)`, accepting the loss of order.
+- **`dedup_with_count()` is run-length encoding** — the same adjacent-run logic as `dedup`, but
+  yielding `(item, count)` pairs. It is the lazy, positional counterpart to `value_counts`: same
+  output shape, but counting adjacent runs in source order rather than occurrences overall. On
+  `[4, 4, 2, 3, 3, 1]` it gives `((4, 2), (2, 1), (3, 2), (1, 1))` where `value_counts()` gives
+  `((4, 2), (3, 2), (2, 1), (1, 1))`. Prefer it to
+  `chunk_by(f).map(lambda kv: (kv[0], len(kv[1])))`, which materialises every run to measure it.
+  Note the `(item, count)` order is the reverse of Rust's `dedup_with_count`. It stays lazy on an
+  infinite source, but an infinite individual run (e.g. `itertools.repeat(1)`) will hang.
 - **`rev()` materialises the entire remaining sequence** into memory before yielding — unavoidable,
   but never call it on an unbounded source.
 - **`repeat(n)` tees the iterator `n` times**, so it buffers the whole sequence for large `n`; it
@@ -149,6 +160,15 @@ infinite source. `collect`, `count`, `last`, `consume`, `fold`, `reduce`, `sum`,
   must be finite even though the chain stays lazy in `self`.
 - **`inspect(func)` is the lazy debugging hook** — it calls `func` on each item and passes it
   through unchanged, so you can drop it mid-chain without altering results.
+- **`scan(init, func)` is `accumulate` with a separate state type and an early exit.** `func(state,
+  item)` returns `(new_state, output)`, or `None` to stop. `None` as the *whole* return value halts;
+  `(new_state, None)` yields `None` as an output, so the two are never ambiguous. Reach for
+  `accumulate` when the state is just the running value, and `scan` otherwise.
+- **`is_sorted(key=None, *, reverse=False)` is non-strict** — runs of equal items count as sorted,
+  and empty/single-item iterators are sorted. The `key` argument covers Rust's `is_sorted_by_key`.
+- **`eq(other)` compares contents; `==` does not.** `Itr` defines no `__eq__`, so `itr_a == itr_b`
+  is an identity check. Use `.eq(other)` for an element-wise comparison, which also short-circuits
+  rather than materialising both sides.
 
 ## Typing
 
