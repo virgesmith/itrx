@@ -56,7 +56,7 @@ def test_nth() -> None:
     assert it.nth(0) == 10
     # consumes preceding items, so this advances from the current position
     assert it.nth(2) == 40
-    with pytest.raises(ValueError, match="out of range"):
+    with pytest.raises(IndexError, match="out of range"):
         it.nth(10)
 
 
@@ -168,9 +168,9 @@ def test_take_last_invalid() -> None:
 def test_terminal_errors_do_not_truncate_enclosing_chain() -> None:
     # a StopIteration escaping a map callback would silently end the outer iteration instead of raising
     groups = [[1, 2], [], [3]]
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         Itr(groups).map(lambda g: Itr(g).reduce(max)).collect()
-    with pytest.raises(ValueError):
+    with pytest.raises(IndexError):
         Itr(groups).map(lambda g: Itr(g).nth(0)).collect()
     with pytest.raises(ValueError):
         Itr(groups).map(lambda g: Itr(g).peek()).collect()

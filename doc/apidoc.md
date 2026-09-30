@@ -646,7 +646,8 @@ Returns:
     T: The n-th item.
 
 Raises:
-    ValueError: if n < 0, or the iterator has fewer than n + 1 items.
+    ValueError: if n < 0
+    IndexError: if the iterator has fewer than n + 1 items (as when indexing a sequence past its end).
 
 Example:
     >>> Itr("abc").nth(1)
@@ -773,7 +774,8 @@ Returns:
     T: The final reduced value.
 
 Raises:
-    ValueError: If the iterator is empty (use `fold` to supply an initial value instead).
+    TypeError: If the iterator is empty, as with `functools.reduce` (use `fold` to supply an initial value
+        instead).
 
 Example:
     >>> Itr([3, 1, 4]).reduce(max)

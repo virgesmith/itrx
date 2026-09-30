@@ -4,7 +4,9 @@
 
 - Terminal methods no longer raise `StopIteration` when an item is missing. A `StopIteration` escaping a `map`/`filter` callback silently ends the *enclosing* iteration, so e.g. `Itr(groups).map(lambda g: Itr(g).reduce(max))` used to drop every group after the first empty one without any error. Now:
   - `position` returns `None` when nothing matches (like `find`, and Rust's `Option`).
-  - `peek`, `nth` (index out of range) and `reduce` (empty input) raise `ValueError`, consistent with `last`, `max` and `min`.
+  - `nth` raises `IndexError` when the iterator is too short, like indexing a sequence past its end (a negative `n` is still a `ValueError`).
+  - `reduce` raises `TypeError` on an empty iterator, like `functools.reduce`.
+  - `peek` raises `ValueError` on an exhausted iterator, consistent with `last`, `max` and `min`.
   - `next()` still raises `StopIteration`, as the builtin does.
 - `partition` calls the predicate once per item rather than twice, buffering items for whichever side is not being read. Side-effecting predicates now see each item exactly once.
 

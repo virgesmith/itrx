@@ -734,7 +734,8 @@ class Itr[T](Iterator[T]):
             T: The n-th item.
 
         Raises:
-            ValueError: if n < 0, or the iterator has fewer than n + 1 items.
+            ValueError: if n < 0
+            IndexError: if the iterator has fewer than n + 1 items (as when indexing a sequence past its end).
 
         Example:
             >>> Itr("abc").nth(1)
@@ -745,7 +746,7 @@ class Itr[T](Iterator[T]):
         try:
             return next(itertools.islice(self._it, n, None))
         except StopIteration:
-            raise ValueError(f"nth({n}) is out of range: the iterator has fewer than {n + 1} items") from None
+            raise IndexError(f"nth({n}) is out of range: the iterator has fewer than {n + 1} items") from None
 
     def pairwise(self) -> "Itr[tuple[T, T]]":
         """Returns an iterator that yields consecutive pairs of elements from the iterable.
@@ -882,7 +883,8 @@ class Itr[T](Iterator[T]):
             T: The final reduced value.
 
         Raises:
-            ValueError: If the iterator is empty (use `fold` to supply an initial value instead).
+            TypeError: If the iterator is empty, as with `functools.reduce` (use `fold` to supply an initial value
+                instead).
 
         Example:
             >>> Itr([3, 1, 4]).reduce(max)
@@ -891,7 +893,7 @@ class Itr[T](Iterator[T]):
         try:
             first = next(self._it)
         except StopIteration:
-            raise ValueError("reduce() of an empty iterator") from None
+            raise TypeError("reduce() of an empty iterator with no initial value") from None
         return self.fold(first, func)
 
     def repeat(self, n: int) -> "Itr[T]":

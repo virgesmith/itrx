@@ -73,7 +73,7 @@ def test_reduce_empty() -> None:
     # the lambda wont get called, result is just the single element
     assert it.reduce(lambda _a, _b: 0) == 1
     # and again on exhausted iterator
-    with pytest.raises(ValueError, match="empty"):
+    with pytest.raises(TypeError, match="empty"):
         it.reduce(lambda _a, _b: 0)
 
 

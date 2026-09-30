@@ -120,10 +120,13 @@ short-circuit on the first difference or inversion, so they too are safe on an i
   the returned ones. If one tee lags far behind another the buffer grows to hold the gap, so
   memory can blow up on a large or infinite source. `tee(n)` raises `ValueError` for `n < 1`.
 - **`nth(n)` is 0-based** (like Rust's `Iterator::nth`): `nth(0)` is the first item. It raises
-  `ValueError` for `n < 0` or if the iterator is shorter than `n + 1`.
-- **Missing items: `None` or `ValueError`, and only `next()` raises `StopIteration`.** `find`,
-  `find_map` and `position` return `None` when nothing matches. `peek`, `nth`, `reduce`, `last`,
-  `max`, `min` and `min_max` raise `ValueError` on an empty (or too short) iterator. `next()`
+  `ValueError` for `n < 0`, and `IndexError` (as sequence indexing does) if the iterator is
+  shorter than `n + 1`.
+- **Missing items: `None` or an ordinary exception; only `next()` raises `StopIteration`.**
+  `find`, `find_map` and `position` return `None` when nothing matches. `peek`, `last`, `max`,
+  `min` and `min_max` raise `ValueError` on an empty iterator; following their builtin
+  counterparts, `nth` raises `IndexError` and `reduce` raises `TypeError` (as `functools.reduce`
+  does). `next()`
   raises `StopIteration`, like the builtin — so don't call `.next()` inside a `map`/`filter`
   callback: a `StopIteration` escaping a callback silently ends the *enclosing* iteration instead
   of raising. Use `find`, `peek` or `nth(0)` there.
