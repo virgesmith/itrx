@@ -62,3 +62,9 @@ def test_consume_on_empty_iterator_no_error() -> None:
     itr: Itr[None] = Itr(())
     itr.consume()  # should not raise
     assert itr.collect() == ()
+
+
+def test_repr_does_not_consume() -> None:
+    it = Itr([1, 2]).map(str)
+    assert repr(it).startswith("Itr(<map object at ")
+    assert it.collect() == ("1", "2")

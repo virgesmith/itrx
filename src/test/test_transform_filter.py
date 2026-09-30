@@ -196,6 +196,19 @@ def test_groupby_string() -> None:
     assert d[6] == ("banana", "carrot")
 
 
+def test_groupby_unsorted() -> None:
+    it = Itr(["bb", "a", "ccc", "dd", "e"]).groupby(len, sort=False)
+    assert it.collect() == ((2, ("bb", "dd")), (1, ("a", "e")), (3, ("ccc",)))
+
+
+def test_groupby_unsorted_needs_only_hashable_keys() -> None:
+    # None and int keys can't be sorted together, but can be hashed
+    data = [1, None, 2, None]
+    with pytest.raises(TypeError):
+        Itr(data).groupby(lambda x: x)
+    assert Itr(data).groupby(lambda x: x, sort=False).collect(dict) == {1: (1,), None: (None, None), 2: (2,)}
+
+
 def test_chunk_by() -> None:
     # consecutive runs only, order preserved, no sorting (unlike groupby)
     it = Itr([1, 1, 2, 3, 3, 1]).chunk_by(lambda x: x)
@@ -311,3 +324,45 @@ def test_scan_can_yield_none_outputs() -> None:
 def test_scan_lazy_on_infinite() -> None:
     running = Itr(itertools.count(1)).scan(0, lambda total, x: (total + x, total + x))
     assert running.take(4).collect() == (1, 3, 6, 10)
+
+
+def test_sorted_by_no_key() -> None:
+    assert Itr([3, 1, 2]).sorted_by().collect() == (1, 2, 3)
+    assert Itr("cab").sorted_by(reverse=True).collect() == ("c", "b", "a")
+
+
+def test_filter_map() -> None:
+    def parse(s: str) -> int | None:
+        return int(s) if s.isdigit() else None
+
+    # only None is dropped, not other falsy values
+    assert Itr(["1", "x", "0", ""]).filter_map(parse).collect() == (1, 0)
+    assert Itr[str]([]).filter_map(parse).collect() == ()
+    assert Itr(itertools.count()).filter_map(lambda n: n if n % 3 == 0 else None).take(3).collect() == (0, 3, 6)
+
+
+def test_flat_map_lazy() -> None:
+    assert Itr([1, 2]).flat_map(lambda n: [n] * n).collect() == (1, 2, 2)
+    assert Itr(itertools.count()).flat_map(lambda n: (n, -n)).take(4).collect() == (0, 0, 1, -1)
+
+
+def test_unique() -> None:
+    assert Itr([3, 1, 3, 2, 1]).unique().collect() == (3, 1, 2)
+    assert Itr[int]([]).unique().collect() == ()
+    assert Itr(["apple", "avocado", "banana", "blueberry"]).unique(lambda s: s[0]).collect() == ("apple", "banana")
+
+
+def test_unique_lazy_on_infinite() -> None:
+    assert Itr(itertools.count()).map(lambda n: n // 3).unique().take(4).collect() == (0, 1, 2, 3)
+
+
+def test_unique_unhashable() -> None:
+    with pytest.raises(TypeError):
+        Itr([[1], [1]]).unique().collect()
+    assert Itr([[1], [2], [1]]).unique(tuple).collect() == ([1], [2])
+
+
+def test_enumerate() -> None:
+    assert Itr("abc").enumerate().collect() == ((0, "a"), (1, "b"), (2, "c"))
+    assert Itr("ab").enumerate(start=5).collect() == ((5, "a"), (6, "b"))
+    assert Itr[str]([]).enumerate().collect() == ()

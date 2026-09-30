@@ -1,3 +1,4 @@
+import itertools
 from typing import Never
 
 import pytest
@@ -8,6 +9,11 @@ from itrx import Itr
 def test_chain() -> None:
     it = Itr([1, 2]).chain([3, 4])
     assert it.collect() == (1, 2, 3, 4)
+
+
+def test_chain_many() -> None:
+    assert Itr([1]).chain([2], (), range(3, 5), "a").collect() == (1, 2, 3, 4, "a")
+    assert Itr([1, 2]).chain().collect() == (1, 2)
 
 
 def test_intersperse() -> None:
@@ -141,11 +147,24 @@ def test_partition_predicate_side_effect() -> None:
 
     it = Itr([1, 2, 3])
     a, b = it.partition(pred)
-    # Both iterators should be independent and call the predicate as needed
+    assert calls == []  # lazy
     assert a.collect() == (3,)
     assert b.collect() == (1, 2)
-    # The predicate should have been called for all elements twice (once per filter)
-    assert calls == [1, 2, 3, 1, 2, 3]
+    # each item is tested exactly once, the non-matching ones being buffered for b
+    assert calls == [1, 2, 3]
+
+
+def test_partition_interleaved_consumption() -> None:
+    evens, odds = Itr(range(10)).partition(lambda x: x % 2 == 0)
+    assert (evens.next(), odds.next(), odds.next(), evens.next()) == (0, 1, 3, 2)
+    assert evens.collect() == (4, 6, 8)
+    assert odds.collect() == (5, 7, 9)
+
+
+def test_partition_infinite() -> None:
+    small, big = Itr(itertools.count()).partition(lambda x: x < 3)
+    assert big.take(3).collect() == (3, 4, 5)
+    assert small.take(3).collect() == (0, 1, 2)
 
 
 def test_repeat_basic() -> None:
@@ -447,3 +466,26 @@ def test_zip_longest_right_longer_with_fillvalue() -> None:
 
 def test_zip_longest_both_empty() -> None:
     assert Itr[int]([]).zip_longest([]).collect() == ()
+
+
+def test_interleave_many() -> None:
+    assert Itr([1, 4, 7]).interleave([2, 5], [3]).collect() == (1, 2, 3, 4, 5, 7)
+    assert Itr[int]([]).interleave([1, 2], [], [3]).collect() == (1, 3, 2)
+    assert Itr([1, 2]).interleave().collect() == (1, 2)
+
+
+def test_zip_strict() -> None:
+    assert Itr([1, 2]).zip("ab", strict=True).collect() == ((1, "a"), (2, "b"))
+    it = Itr([1, 2, 3]).zip("ab", strict=True)
+    # lazy: the mismatch is only detected when the shorter input runs out
+    assert it.next() == (1, "a")
+    with pytest.raises(ValueError):
+        it.collect()
+    assert Itr([1, 2, 3]).zip("ab").collect() == ((1, "a"), (2, "b"))
+
+
+def test_compress() -> None:
+    assert Itr("abcde").compress([1, 0, 1, 0, 1]).collect() == ("a", "c", "e")
+    # stops at the shorter input
+    assert Itr("abcde").compress([True, True]).collect() == ("a", "b")
+    assert Itr(itertools.count()).compress(itertools.cycle([0, 0, 1])).take(3).collect() == (2, 5, 8)

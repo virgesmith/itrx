@@ -43,26 +43,40 @@ Example:
 
 ### `all`
 
-Return True if all elements in the iterator satisfy the predicate.
+Return True if all elements in the iterator satisfy the predicate (by default, if all are truthy).
+
+Short-circuits at the first failure. An empty iterator returns True.
 
 Args:
-    predicate (Callable[[T], bool]): A function to test each element.
+    predicate (Callable[[T], bool]): A function to test each element. Defaults to `bool` (truthiness).
 
 Returns:
     bool: True if all elements satisfy the predicate, False otherwise.
 
+Example:
+    >>> Itr([1, 2, 0]).all()
+    False
+    >>> Itr([2, 4, 6]).all(lambda x: x % 2 == 0)
+    True
 
 
 ### `any`
 
-Return True if any element in the iterator satisfies the predicate.
+Return True if any element in the iterator satisfies the predicate (by default, if any is truthy).
+
+Short-circuits at the first success. An empty iterator returns False.
 
 Args:
-    predicate (Callable[[T], bool]): A function to test each element.
+    predicate (Callable[[T], bool]): A function to test each element. Defaults to `bool` (truthiness).
 
 Returns:
     bool: True if any element satisfies the predicate, False otherwise.
 
+Example:
+    >>> Itr([0, "", None]).any()
+    False
+    >>> Itr([1, 2, 3]).any(lambda x: x > 2)
+    True
 
 
 ### `batched`
@@ -86,14 +100,18 @@ Example:
 
 ### `chain`
 
-Chain this iterator with another iterable, yielding all items from self followed by all items from other.
+Chain this iterator with one or more other iterables, yielding all items from self followed by all items from
+each of the others in turn.
 
 Args:
-    other (Iterable[U]): Another iterable to chain.
+    *others (Iterable[U]): The iterables to chain on.
 
 Returns:
-    Itr[T | U]: A new iterator yielding items from both iterables.
+    Itr[T | U]: A new iterator yielding items from all the iterables.
 
+Example:
+    >>> Itr([1, 2]).chain([3], (4, 5)).collect()
+    (1, 2, 3, 4, 5)
 
 
 ### `chunk_by`
@@ -122,6 +140,23 @@ Collect all remaining items from the iterator into a container (tuple by default
 Returns:
     _CollectT: The remaining items collected into the given container type.
 
+
+
+### `compress`
+
+Yield only the items whose corresponding selector is truthy (like `itertools.compress`).
+
+Stops when either the iterator or the selectors are exhausted.
+
+Args:
+    selectors (Iterable[object]): Values whose truthiness decides whether the item in the same position is kept.
+
+Returns:
+    Itr[T]: An iterator over the selected items.
+
+Example:
+    >>> Itr("abcde").compress([1, 0, 1, 0, 1]).collect()
+    ('a', 'c', 'e')
 
 
 ### `consume`
@@ -203,9 +238,15 @@ Example:
 
 Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided
 
+Args:
+    start (int): The index of the first item. Defaults to 0.
+
 Returns:
     Itr[tuple[int, T]]: An iterator of (index, item) pairs.
 
+Example:
+    >>> Itr("ab").enumerate(start=1).collect()
+    ((1, 'a'), (2, 'b'))
 
 
 ### `eq`
@@ -242,6 +283,24 @@ Returns:
 
 
 
+### `filter_map`
+
+Map each item, keeping only the results that are not None (like Rust's `Iterator::filter_map`).
+
+Equivalent to `map(mapper).filter(lambda x: x is not None)`, but typed as `Itr[U]` rather than
+`Itr[U | None]`. Only None is dropped: other falsy results such as 0 or "" are kept.
+
+Args:
+    mapper (Callable[[T], U | None]): A function mapping each item to a result, or None to drop it.
+
+Returns:
+    Itr[U]: An iterator over the non-None results.
+
+Example:
+    >>> Itr(["1", "x", "0"]).filter_map(lambda s: int(s) if s.isdigit() else None).collect()
+    (1, 0)
+
+
 ### `find`
 
 Return the first item in the iterator that satisfies the predicate, or None if not found.
@@ -252,6 +311,25 @@ Args:
 Returns:
     T | None: The first matching item, or None.
 
+
+
+### `find_map`
+
+Return the first result of the mapper that is not None, or None if there is none (like Rust's
+`Iterator::find_map`).
+
+Equivalent to `filter_map(mapper).next()`, except that it returns None rather than raising when there is no
+result. Short-circuits at the first result.
+
+Args:
+    mapper (Callable[[T], U | None]): A function mapping each item to a result, or None to skip it.
+
+Returns:
+    U | None: The first non-None result, or None.
+
+Example:
+    >>> Itr(["a", "12", "3"]).find_map(lambda s: int(s) if s.isdigit() else None)
+    12
 
 
 ### `flat_map`
@@ -308,13 +386,24 @@ Because the input is sorted, this method is **eager**: it consumes and materiali
 immediately (so it must not be used on an infinite iterator), the output is ordered by key, and the keys must be
 mutually orderable. For lazy, order-preserving grouping of consecutive runs, see `chunk_by`.
 
-Semantically this is equivalent to pandas' default `groupby` (i.e. `sort=True`): all items sharing a key are
-collected into a single group regardless of their position, and groups are emitted in sorted-key order. It has
-no `sort=False` (appearance-order) option, requires mutually-orderable keys, and does not drop `None` keys.
+Semantically this is equivalent to pandas' `groupby`: all items sharing a key are collected into a single group
+regardless of their position, and `None` keys are not dropped. By default (`sort=True`) groups are emitted in
+sorted-key order, which requires mutually-orderable keys. With `sort=False` they are emitted in order of each
+key's first appearance, and the keys need only be hashable. Either way, the items within each group keep
+their original relative order.
+
+Args:
+    grouper (Callable[[T], U]): The key function applied to each element.
+    sort (bool): If True (the default), order the groups by key; otherwise by first appearance.
 
 Returns:
     Itr[tuple[U, tuple[T,...]]]: An iterator over the keys and tuples of values
 
+Example:
+    >>> Itr(["bb", "a", "ccc", "dd"]).groupby(len).collect()
+    ((1, ('a',)), (2, ('bb', 'dd')), (3, ('ccc',)))
+    >>> Itr(["bb", "a", "ccc", "dd"]).groupby(len, sort=False).collect()
+    ((2, ('bb', 'dd')), (1, ('a',)), (3, ('ccc',)))
 
 
 ### `inspect`
@@ -340,19 +429,22 @@ Example:
 ### `interleave`
 
 
-Interleaves elements from this iterator with elements from another iterable, yielding alternately from each.
-When one iterable is exhausted, the remaining elements of the other are yielded in order.
+Interleaves elements from this iterator with elements from one or more other iterables, taking one from each
+in turn (round-robin). Exhausted inputs are skipped, so the remaining elements of the longer ones are yielded
+in order.
 
 Args:
-    other (Iterable[U]): Another iterable to interleave with.
+    *others (Iterable[U]): The iterables to interleave with.
 
 Returns:
-    Itr[T | U]: A new iterator yielding elements alternately from self and other.
+    Itr[T | U]: A new iterator yielding elements from self and the others in turn.
 
 Example:
     >>> Itr([1, 3, 5]).interleave([2, 4, 6]).collect()
     (1, 2, 3, 4, 5, 6)
     >>> Itr([1, 3, 5, 7]).interleave([2, 4]).collect()
+    (1, 2, 3, 4, 5, 7)
+    >>> Itr([1, 4, 7]).interleave([2, 5], [3]).collect()
     (1, 2, 3, 4, 5, 7)
 
 
@@ -470,6 +562,30 @@ Raises:
     ValueError: If the iterator is empty.
 
 
+### `min_max`
+
+Return the minimum and maximum elements in a single pass, optionally using a key function.
+
+Ties resolve as for the `min` and `max` builtins: the first minimal and the first maximal element are returned.
+NB Consumes the iterator.
+
+Args:
+    key (Callable[[T], Any] | None, optional): A function to extract a comparison key from each element.
+        Defaults to comparing the elements themselves.
+
+Returns:
+    tuple[T, T]: The (minimum, maximum) elements.
+
+Raises:
+    ValueError: If the iterator is empty.
+
+Example:
+    >>> Itr([3, 1, 4, 1, 5]).min_max()
+    (1, 5)
+    >>> Itr(["bb", "a", "ccc", "dd"]).min_max(len)
+    ('a', 'ccc')
+
+
 ### `next`
 
 Return the next item from the iterator, if available. Otherwise raises StopIteration
@@ -530,9 +646,11 @@ Returns:
     T: The n-th item.
 
 Raises:
-    StopIteration: if the iterator has fewer than n + 1 items.
-    ValueError: if n < 0
+    ValueError: if n < 0, or the iterator has fewer than n + 1 items.
 
+Example:
+    >>> Itr("abc").nth(1)
+    'b'
 
 
 ### `pairwise`
@@ -560,6 +678,15 @@ Returns:
         - The first iterator yields elements for which the predicate returns True.
         - The second iterator yields elements for which the predicate returns False.
 
+Both iterators are lazy and share the source, and the predicate is called exactly once per item. Items destined
+for one iterator are buffered while the other is being consumed, so memory can grow if one side lags far behind
+(as with `tee`).
+
+Example:
+    >>> even, odd = Itr(range(6)).partition(lambda x: x % 2 == 0)
+    >>> even.collect(), odd.collect()
+    ((0, 2, 4), (1, 3, 5))
+
 
 ### `peek`
 
@@ -569,7 +696,7 @@ Returns:
     T: The next element in the sequence.
 
 Raises:
-    StopIteration: If the iterator is exhausted.
+    ValueError: If the iterator is exhausted.
 
 Note:
     This method copies the iterator to avoid modifying the original iterator's state. The copy is cheap
@@ -588,23 +715,30 @@ Example:
 ### `position`
 
 
-Returns the index of the first element in the iterable that satisfies the given predicate.
+Returns the index of the first element in the iterable that satisfies the given predicate, or None if there
+is no such element (like Rust's `Iterator::position`). The index counts from the iterator's current position.
 
 Args:
     predicate (Callable[[T], bool]): A function that takes an element and returns True if the element matches the condition.
 
 Returns:
-    int: The index of the first matching element.
+    int | None: The index of the first matching element, or None.
 
-Raises:
-    StopIteration: If no element satisfies the predicate.
+Example:
+    >>> Itr("abc").position(lambda c: c == "b")
+    1
+    >>> Itr("abc").position(lambda c: c == "z") is None
+    True
 
 
 ### `prod`
 
-Return the product of all items in the iterator (1 if empty). NB Consumes the iterator.
+Return the product of `start` and all items in the iterator (so `start` if empty). NB Consumes the iterator.
 
 The items must support multiplication (e.g. numbers).
+
+Args:
+    start (T | int): The initial value, multiplied by each item in turn. Defaults to 1.
 
 Returns:
     T: The product of all items.
@@ -612,6 +746,8 @@ Returns:
 Example:
     >>> Itr([2, 3, 4]).prod()
     24
+    >>> Itr([2, 3]).prod(10)
+    60
 
 
 ### `product`
@@ -628,8 +764,7 @@ Returns:
 
 ### `reduce`
 
-Reduce the iterator to a single value using a function.
-Will raise StopIteration if the iterator is exhausted.
+Reduce the iterator to a single value using a function, taking the first item as the initial value.
 
 Args:
     func (Callable[[T, T], T]): The function to combine values.
@@ -637,6 +772,12 @@ Args:
 Returns:
     T: The final reduced value.
 
+Raises:
+    ValueError: If the iterator is empty (use `fold` to supply an initial value instead).
+
+Example:
+    >>> Itr([3, 1, 4]).reduce(max)
+    4
 
 
 ### `repeat`
@@ -719,13 +860,15 @@ Returns:
 
 ### `sorted_by`
 
-Return an iterator over the items sorted by the given key function.
+Return an iterator over the items sorted by the given key function, or by the items themselves if no key is
+given.
 
 This method is **eager**: it consumes and materialises the whole iterator immediately (so it must not be
 used on an infinite iterator). The sort is stable: items that compare equal retain their relative order.
 
 Args:
-    key (Callable[[T], Any]): A function to extract a comparison key from each item.
+    key (Callable[[T], Any] | None): A function to extract a comparison key from each item. Defaults to
+        comparing the items themselves.
     reverse (bool): If True, sort in descending order. Defaults to False.
 
 Returns:
@@ -734,6 +877,8 @@ Returns:
 Example:
     >>> Itr(["ccc", "a", "bb"]).sorted_by(len).collect()
     ('a', 'bb', 'ccc')
+    >>> Itr([3, 1, 2]).sorted_by(reverse=True).collect()
+    (3, 2, 1)
 
 
 ### `starmap`
@@ -767,9 +912,13 @@ Returns:
 
 ### `sum`
 
-Return the sum of all items in the iterator (0 if empty). NB Consumes the iterator.
+Return the sum of `start` and all items in the iterator (so `start` if empty). NB Consumes the iterator.
 
-The items must support addition with int (e.g. numbers; use `reduce` or `fold` for other types).
+The items must support addition with `start`: with the default of 0 that means numbers. Pass e.g. `start=[]` to
+concatenate lists (as with the `sum` builtin, strings are rejected: use `"".join` instead).
+
+Args:
+    start (T | int): The initial value, to which each item is added in turn. Defaults to 0.
 
 Returns:
     T: The sum of all items.
@@ -777,6 +926,8 @@ Returns:
 Example:
     >>> Itr([1, 2, 3]).sum()
     6
+    >>> Itr([[1], [2, 3]]).sum([])
+    [1, 2, 3]
 
 
 ### `take`
@@ -789,6 +940,27 @@ Args:
 Returns:
     Itr[T]: An iterator over the next n items.
 
+
+
+### `take_last`
+
+Return an iterator over the last n items (or all of them, if there are fewer than n).
+
+This method is **eager**: it consumes the whole iterator immediately to find its end (so it must not be used on
+an infinite iterator), but only ever holds n items in memory.
+
+Args:
+    n (int): The number of items to keep.
+
+Returns:
+    Itr[T]: An iterator over the last n items.
+
+Raises:
+    ValueError: if n < 0
+
+Example:
+    >>> Itr(range(10)).take_last(3).collect()
+    (7, 8, 9)
 
 
 ### `take_while`
@@ -842,6 +1014,27 @@ Examples:
 [0, 1, 2]
 
 
+### `unique`
+
+Lazily drop items that have been seen before, keeping the first occurrence of each and preserving order.
+
+Unlike `dedup`, duplicates need not be adjacent; unlike `collect(set)`, order is preserved and it works on an
+infinite iterator. The seen items (or their keys) are held in a set, so they must be hashable, and memory
+grows with the number of distinct values.
+
+Args:
+    key (Callable[[T], Any] | None): Applied to each item to decide uniqueness. Defaults to the item itself.
+
+Returns:
+    Itr[T]: An iterator over the first occurrence of each distinct item (or key).
+
+Example:
+    >>> Itr([3, 1, 3, 2, 1]).unique().collect()
+    (3, 1, 2)
+    >>> Itr(["apple", "avocado", "banana"]).unique(lambda s: s[0]).collect()
+    ('apple', 'banana')
+
+
 ### `unzip`
 
 Splits the iterator of pairs into two separate iterators, each containing the elements from one position of
@@ -877,14 +1070,19 @@ Example:
 
 ### `zip`
 
-Yield pairs of items from this iterator and another iterable.
+Yield pairs of items from this iterator and another iterable, stopping at the end of the shorter one.
 
 Args:
     other (Iterable[U]): The other iterable.
+    strict (bool): If True, raise `ValueError` (when the shorter input runs out, since this is lazy) if the
+        inputs differ in length, as with the `zip` builtin. Defaults to False.
 
 Returns:
     Itr[tuple[T, U]]: An iterator of paired items.
 
+Example:
+    >>> Itr([1, 2, 3]).zip("ab").collect()
+    ((1, 'a'), (2, 'b'))
 
 
 ### `zip_longest`

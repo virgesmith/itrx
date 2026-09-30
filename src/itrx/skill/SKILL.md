@@ -49,7 +49,8 @@ equivalent `itertools` code, because it *is* that code underneath. Reach for it 
   terminal call.
 - **The operation exists in Rust's `Iterator` but not as a Python builtin** — `fold`, `inspect`,
   `partition`, `position`, `intersperse`, `interleave`, `dedup`, `dedup_with_count`, `chunk_by`,
-  `unzip`, `map_while`, `scan`, `is_sorted`, `eq`, `next_chunk`, `step_by`, `rolling`.
+  `unzip`, `map_while`, `filter_map`, `find_map`, `scan`, `is_sorted`, `eq`, `next_chunk`,
+  `step_by`, `rolling`, `min_max`, `unique`.
 
 Conversely, it is **not** worth it for a single `map`/`filter` (a comprehension is clearer), for
 code already dominated by numpy/pandas vectorised calls, or where the data is a materialised
@@ -67,24 +68,25 @@ wrapping a **generator or iterator** hands over ownership: consuming the `Itr` c
 sources — with the exception of `product`, which materialises `other` up front like
 `itertools.product` does):
 
-`accumulate`, `batched`, `chain`, `chunk_by`, `copy`, `cycle`, `dedup`, `dedup_with_count`,
-`enumerate`, `filter`,
-`flat_map`, `flatten`, `inspect`, `interleave`, `intersperse`, `map`, `map_dict`, `map_while`,
-`pairwise`, `partition`, `product`, `repeat`, `rolling`, `scan`, `skip`, `skip_while`,
-`step_by`, `take`,
-`take_while`, `tee`, `unzip`, `zip`, `zip_longest`
+`accumulate`, `batched`, `chain`, `chunk_by`, `compress`, `copy`, `cycle`, `dedup`,
+`dedup_with_count`, `enumerate`, `filter`, `filter_map`, `flat_map`, `flatten`, `inspect`,
+`interleave`, `intersperse`, `map`, `map_dict`, `map_while`, `pairwise`, `partition`, `product`,
+`repeat`, `rolling`, `scan`, `skip`, `skip_while`, `starmap`, `step_by`, `take`, `take_while`,
+`tee`, `unique`, `unzip`, `zip`, `zip_longest`
 
 **Eager** (consume the iterator, return a concrete value; **never** on an infinite source):
 
 - Collection: `collect`, `last`, `next`, `next_chunk`, `next_if`, `nth`, `position`, `peek`
-- Aggregation: `all`, `any`, `consume`, `count`, `eq`, `find`, `fold`, `for_each`, `is_sorted`,
-  `max`, `min`, `prod`, `reduce`, `sum`
-- Whole-input reordering: `groupby`, `sorted_by`, `value_counts`, `rev`
+- Aggregation: `all`, `any`, `consume`, `count`, `eq`, `find`, `find_map`, `fold`, `for_each`,
+  `is_sorted`, `max`, `min`, `min_max`, `prod`, `reduce`, `sum`
+- Whole-input: `groupby`, `sorted_by`, `value_counts`, `rev`, `take_last` (these return an `Itr`,
+  but read the entire input at call time)
 
 Note that some of these consume only as far as they need to: `next`, `next_chunk`, `nth`,
-`next_if`, `peek`, `find`, `position`, `any` and `all` short-circuit, so they *are* safe on an
-infinite source. `collect`, `count`, `last`, `consume`, `fold`, `reduce`, `sum`, `prod`, `max`,
-`min`, `for_each`, `rev`, `groupby`, `sorted_by` and `value_counts` are not. `eq` and `is_sorted`
+`next_if`, `peek`, `find`, `find_map`, `position`, `any` and `all` short-circuit, so they *are*
+safe on an infinite source. `collect`, `count`, `last`, `consume`, `fold`, `reduce`, `sum`,
+`prod`, `max`, `min`, `min_max`, `for_each`, `rev`, `take_last`, `groupby`, `sorted_by` and
+`value_counts` are not. `eq` and `is_sorted`
 short-circuit on the first difference or inversion, so they too are safe on an infinite source.
 
 ## Outputs
@@ -99,7 +101,8 @@ short-circuit on the first difference or inversion, so they too are safe on an i
 
 - `collect(dict)` requires the iterator to yield 2-tuples — pair up with `zip`, `enumerate`,
   `groupby`, `chunk_by`, `value_counts` or a `map` that returns pairs first.
-- `collect(set)` is the "unique" operation (and drops order).
+- `collect(set)` gives the distinct items but drops order; the lazy `unique()` keeps the first
+  occurrence of each, in order.
 - `for_each(func)` is the side-effecting terminal; `consume()` exhausts for side effects alone
   (pair it with `inspect`); `fold(init, func)` is the general terminal reduction.
 
@@ -109,26 +112,34 @@ short-circuit on the first difference or inversion, so they too are safe on an i
   sequence twice, use `copy()` (splits at the current position into an independent `Itr`),
   `tee(n)`, or re-wrap the original source. There is no `reset`.
 - **`peek()` does not advance**, and returns the same value on repeated calls; it raises
-  `StopIteration` when exhausted. `next_if(predicate)` consumes the next item **only** if it
+  `ValueError` when exhausted. `next_if(predicate)` consumes the next item **only** if it
   satisfies the predicate, otherwise leaves it in place and returns `None` (also `None` when
-  exhausted) — the correct tool for conditional lookahead parsing.
+  exhausted) — the correct tool for conditional lookahead parsing. If the items can themselves be
+  `None`, a `None` result is ambiguous; `peek()` first to tell the cases apart.
 - **`tee(n)` and `copy()` share a buffer.** After `tee`, do not consume the original `Itr` — use
   the returned ones. If one tee lags far behind another the buffer grows to hold the gap, so
   memory can blow up on a large or infinite source. `tee(n)` raises `ValueError` for `n < 1`.
 - **`nth(n)` is 0-based** (like Rust's `Iterator::nth`): `nth(0)` is the first item. It raises
-  `ValueError` for `n < 0` and `StopIteration` if the iterator is shorter than `n + 1`.
-- **`next()` and `last()` raise `StopIteration`** on an empty iterator, they do not return `None`.
-  `find(predicate)` *does* return `None` when nothing matches.
-- **`groupby(key)` and `sorted_by(key)` sort the whole input up front**, so they reorder output,
-  require mutually-orderable keys, and must not touch an infinite source. Use the lazy
-  **`chunk_by(key)`** to group *consecutive* runs without sorting (the `itertools.groupby`
-  semantics) — it preserves order and works on infinite iterators.
+  `ValueError` for `n < 0` or if the iterator is shorter than `n + 1`.
+- **Missing items: `None` or `ValueError`, and only `next()` raises `StopIteration`.** `find`,
+  `find_map` and `position` return `None` when nothing matches. `peek`, `nth`, `reduce`, `last`,
+  `max`, `min` and `min_max` raise `ValueError` on an empty (or too short) iterator. `next()`
+  raises `StopIteration`, like the builtin — so don't call `.next()` inside a `map`/`filter`
+  callback: a `StopIteration` escaping a callback silently ends the *enclosing* iteration instead
+  of raising. Use `find`, `peek` or `nth(0)` there.
+- **`groupby(key)` and `sorted_by(key=None)` sort the whole input up front**, so they reorder
+  output, require mutually-orderable keys, and must not touch an infinite source.
+  `groupby(key, sort=False)` still reads everything, but emits groups in first-appearance order
+  and needs only hashable keys. Use the lazy **`chunk_by(key)`** to group *consecutive* runs
+  without sorting (the `itertools.groupby` semantics) — it preserves order and works on infinite
+  iterators.
 - **`value_counts()` is eager** and yields `(value, count)` most-common-first with ties by first
   appearance (pandas semantics, not sorted by key). Items must be hashable. Collect it into a
   `dict` for a lookup table.
 - **`dedup()` removes only *adjacent* duplicates**, keeping the first of each run. It compares by
   equality (items need not be hashable) and stays lazy — it is not "unique". For global
-  uniqueness use `collect(set)`, accepting the loss of order.
+  uniqueness use **`unique(key=None)`**, which is also lazy and order-preserving but needs
+  hashable items (or keys) and remembers every distinct one it has seen.
 - **`dedup_with_count()` is run-length encoding** — the same adjacent-run logic as `dedup`, but
   yielding `(item, count)` pairs. It is the lazy, positional counterpart to `value_counts`: same
   output shape, but counting adjacent runs in source order rather than occurrences overall. On
@@ -138,15 +149,20 @@ short-circuit on the first difference or inversion, so they too are safe on an i
   Note the `(item, count)` order is the reverse of Rust's `dedup_with_count`. It stays lazy on an
   infinite source, but an infinite individual run (e.g. `itertools.repeat(1)`) will hang.
 - **`rev()` materialises the entire remaining sequence** into memory before yielding — unavoidable,
-  but never call it on an unbounded source.
-- **`repeat(n)` tees the iterator `n` times**, so it buffers the whole sequence for large `n`; it
-  always returns a new `Itr` and leaves the original exhausted. `cycle()` repeats indefinitely.
+  but never call it on an unbounded source. For just the end of a sequence, `take_last(n)` also
+  reads everything but holds only `n` items.
+- **`repeat(n)` tees the iterator `n` times**, so it buffers the whole sequence for large `n`. It
+  is lazy and shares the underlying iterator: do not use the original `Itr` after calling it, only
+  the returned one. `cycle()` repeats indefinitely.
 - **`flatten()` removes exactly one level** of nesting and every item must itself be iterable
   (note that `str` is, which flattens strings into characters). `flat_map(f)` is
   `map(f).flatten()`.
-- **`zip(other)` stops at the shorter input** (no `strict=True` mode); `zip_longest(other,
-  fillvalue=...)` runs to the longer, padding. `interleave(other)` alternates and then yields the
-  tail of whichever is longer.
+- **`filter_map(f)` drops only `None` results** (not `0` or `""`), and is typed `Itr[U]` rather
+  than `Itr[U | None]`, so prefer it to `map(f).filter(...)`. `find_map(f)` is its first result.
+- **`zip(other, *, strict=False)` stops at the shorter input**; with `strict=True` it raises
+  `ValueError` on a length mismatch, but only once iteration reaches it. `zip_longest(other,
+  fillvalue=...)` runs to the longer, padding. `chain(*others)` and `interleave(*others)` take any
+  number of iterables; `interleave` round-robins and keeps going with the longer ones.
 - **`starmap(f)` unpacks each item as `*args`** — use it after `zip`, `enumerate`, `pairwise` or
   `product` instead of `map(lambda t: f(*t))`.
 - **`map_dict(mapping)`** looks each item up in a `dict` (a `defaultdict` works); a missing key
@@ -154,8 +170,11 @@ short-circuit on the first difference or inversion, so they too are safe on an i
 - **`batched(n)` yields non-overlapping tuples** (the last possibly short); **`rolling(n)`** yields
   overlapping windows of exactly `n` (a generalisation of `pairwise`); **`step_by(n)`** keeps every
   n-th item starting with the first.
-- **`partition(predicate)`** returns `(matching, non_matching)` as two lazy `Itr`s built on a
-  `copy()`, so the predicate runs twice per item and the same buffering caveat as `tee` applies.
+- **`partition(predicate)`** returns `(matching, non_matching)` as two lazy `Itr`s sharing the
+  source. The predicate runs once per item; items for the side not being read are buffered, so
+  as with `tee`, memory grows if one side lags far behind the other.
+- **`all()` / `any()` default to truthiness**, and **`sum(start=0)` / `prod(start=1)`** take a
+  start value (`sum([])` concatenates lists; strings are rejected, as by the builtin).
 - **`product(other)` materialises `other`** (as `itertools.product` does), so the *other* iterable
   must be finite even though the chain stays lazy in `self`.
 - **`inspect(func)` is the lazy debugging hook** — it calls `func` on each item and passes it
@@ -169,6 +188,8 @@ short-circuit on the first difference or inversion, so they too are safe on an i
 - **`eq(other)` compares contents; `==` does not.** `Itr` defines no `__eq__`, so `itr_a == itr_b`
   is an identity check. Use `.eq(other)` for an element-wise comparison, which also short-circuits
   rather than materialising both sides.
+- **`min_max(key=None)`** finds both extremes in one pass, with the builtins' tie-breaking (the
+  first minimal and first maximal item).
 
 ## Typing
 

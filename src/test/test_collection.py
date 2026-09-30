@@ -56,20 +56,18 @@ def test_nth() -> None:
     assert it.nth(0) == 10
     # consumes preceding items, so this advances from the current position
     assert it.nth(2) == 40
-    with pytest.raises(StopIteration):
+    with pytest.raises(ValueError, match="out of range"):
         it.nth(10)
 
 
 def test_position() -> None:
     assert Itr("abcdefghijklmnopqrstuvwxyz").position(lambda x: x == "a") == 0
-    with pytest.raises(StopIteration):
-        Itr("abcdefghijklmnopqrstuvwxyz").position(lambda x: x == "H")
+    assert Itr("abcdefghijklmnopqrstuvwxyz").position(lambda x: x == "H") is None
 
     a = Itr("abcdefghijklmnopqrstuvwxyz")
     assert a.position(lambda x: x == "h") == 7
     assert a.position(lambda x: x == "z") == 17  # counter is reset
-    with pytest.raises(StopIteration):
-        assert a.position(lambda x: x == "a")  # iterator is exhausted
+    assert a.position(lambda x: x == "a") is None  # iterator is exhausted
 
 
 def test_peek_does_not_advance_iterator() -> None:
@@ -85,7 +83,7 @@ def test_peek_does_not_advance_iterator() -> None:
 
 def test_peek_on_empty_iterator_raises() -> None:
     it = Itr[bool]([])
-    with pytest.raises(StopIteration):
+    with pytest.raises(ValueError, match="exhausted"):
         it.peek()
 
 
@@ -153,3 +151,27 @@ def test_next_if_after_peek() -> None:
     assert it.next_if(lambda x: x == 5) == 5
     assert it.next_if(lambda x: x == 5) is None
     assert it.peek() == 6
+
+
+def test_take_last() -> None:
+    assert Itr(range(10)).take_last(3).collect() == (7, 8, 9)
+    assert Itr(range(2)).take_last(3).collect() == (0, 1)
+    assert Itr(range(10)).take_last(0).collect() == ()
+    assert Itr[int]([]).take_last(3).collect() == ()
+
+
+def test_take_last_invalid() -> None:
+    with pytest.raises(ValueError, match="n >= 0"):
+        Itr(range(3)).take_last(-1)
+
+
+def test_terminal_errors_do_not_truncate_enclosing_chain() -> None:
+    # a StopIteration escaping a map callback would silently end the outer iteration instead of raising
+    groups = [[1, 2], [], [3]]
+    with pytest.raises(ValueError):
+        Itr(groups).map(lambda g: Itr(g).reduce(max)).collect()
+    with pytest.raises(ValueError):
+        Itr(groups).map(lambda g: Itr(g).nth(0)).collect()
+    with pytest.raises(ValueError):
+        Itr(groups).map(lambda g: Itr(g).peek()).collect()
+    assert Itr(groups).map(lambda g: Itr(g).position(lambda x: x > 1)).collect() == (1, None, 0)
