@@ -73,7 +73,7 @@ def test_reduce_empty() -> None:
     # the lambda wont get called, result is just the single element
     assert it.reduce(lambda _a, _b: 0) == 1
     # and again on exhausted iterator
-    with pytest.raises(StopIteration):
+    with pytest.raises(TypeError, match="empty"):
         it.reduce(lambda _a, _b: 0)
 
 
@@ -270,3 +270,58 @@ def test_is_sorted_reverse() -> None:
 def test_is_sorted_agrees_with_sorted_by() -> None:
     data = ["ccc", "a", "bb"]
     assert Itr(data).sorted_by(len).is_sorted(len)
+
+
+def test_all_any_default_truthiness() -> None:
+    assert Itr([1, "a", [0]]).all()
+    assert not Itr([1, 0, 2]).all()
+    assert Itr[int]([]).all()
+    assert Itr([0, "", None, 3]).any()
+    assert not Itr([0, "", None]).any()
+    assert not Itr[int]([]).any()
+
+
+def test_all_any_short_circuit() -> None:
+    it = Itr(itertools.count())
+    assert not it.all()  # 0 is falsy
+    assert it.next() == 1
+    assert Itr(itertools.count()).any()
+
+
+def test_sum_prod_start() -> None:
+    assert Itr([1, 2, 3]).sum(10) == 16
+    assert Itr[int]([]).sum(10) == 10
+    assert Itr([[1], [2, 3]]).sum([]) == [1, 2, 3]
+    assert Itr([2, 3]).prod(10) == 60
+    assert Itr[int]([]).prod(10) == 10
+
+
+def test_find_map() -> None:
+    def parse(s: str) -> int | None:
+        return int(s) if s.isdigit() else None
+
+    assert Itr(["a", "12", "3"]).find_map(parse) == 12
+    assert Itr(["a", "b"]).find_map(parse) is None
+    assert Itr[str]([]).find_map(parse) is None
+    # short-circuits, so is safe on an infinite iterator
+    assert Itr(itertools.count()).find_map(lambda n: n * n if n > 3 else None) == 16
+
+
+def test_min_max() -> None:
+    assert Itr([3, 1, 4, 1, 5, 9, 2, 6]).min_max() == (1, 9)
+    assert Itr([7]).min_max() == (7, 7)
+    assert Itr(["bb", "a", "ccc", "dd"]).min_max(len) == ("a", "ccc")
+
+
+def test_min_max_ties_match_builtins() -> None:
+    data = [(1, "a"), (0, "b"), (0, "c"), (2, "d"), (2, "e")]
+
+    def key(t: tuple[int, str]) -> int:
+        return t[0]
+
+    assert Itr(data).min_max(key) == (min(data, key=key), max(data, key=key)) == ((0, "b"), (2, "d"))
+
+
+def test_min_max_empty() -> None:
+    with pytest.raises(ValueError, match="empty"):
+        Itr[int]([]).min_max()
