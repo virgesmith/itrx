@@ -277,6 +277,7 @@ class Itr[T](Iterator[T]):
             >>> Itr([1, 2, 3]).eq([1, 2])
             False
         """
+        # TODO(py3.15): when 3.15 is the minimum, use a PEP 661 sentinel("UNEQUAL") here for a readable repr
         unequal = object()
         return all(a == b for a, b in itertools.zip_longest(self._it, other, fillvalue=unequal))
 
@@ -517,6 +518,8 @@ class Itr[T](Iterator[T]):
             >>> Itr([1, 4, 7]).interleave([2, 5], [3]).collect()
             (1, 2, 3, 4, 5, 7)
         """
+        # TODO(py3.15): when 3.15 is the minimum, use a PEP 661 sentinel("MISSING") here: ty can narrow
+        # `item is not MISSING` on a declared sentinel (it can't on object()), so the cast below can be dropped
         _sentinel = object()
 
         def interleaver() -> Generator[T | U]:
