@@ -56,7 +56,7 @@ When reviewing a PR or diff, check:
 ## QA Rules
 
 - Run the full gate suite (`ruff check`, `ruff format --check`, `ty check`, `pytest`) before declaring any task done.
-- CI runs the matrix: Python 3.12, 3.13, 3.14 × ubuntu, windows, macos. Flag anything that might be platform- or version-specific.
+- CI runs the matrix: Python 3.13, 3.14, 3.15 × ubuntu, windows, macos. Flag anything that might be platform- or version-specific.
 - If a test is skipped or marked `xfail`, leave a comment explaining why and when it can be removed.
 - Coverage HTML is uploaded as a CI artefact for Linux/Python 3.13. Check it for any uncovered lines after adding new code.
 - Doctests in [README.md](README.md) are executed by pytest (`--doctest-glob=README.md`). Keep them runnable.
