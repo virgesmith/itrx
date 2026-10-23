@@ -112,7 +112,7 @@ class Itr[T](Iterator[T]):
             >>> list(Itr(range(7)).batched(3))
             [(0, 1, 2), (3, 4, 5), (6,)]
         """
-        return cast("Itr[tuple[T, ...]]", Itr(itertools.batched(self._it, n)))
+        return Itr(itertools.batched(self._it, n, strict=False))
 
     def chain[U](self, *others: Iterable[U]) -> "Itr[T | U]":
         """Chain this iterator with one or more other iterables, yielding all items from self followed by all items from
@@ -139,7 +139,7 @@ class Itr[T](Iterator[T]):
     @overload
     def collect[K, V](self, container: type[dict[K, V]]) -> dict[K, V]: ...
 
-    def collect(self, container: type[_CollectT] = tuple) -> _CollectT:  # ty: ignore[invalid-parameter-default]
+    def collect(self, container: Callable[[Iterable[T]], _CollectT] = tuple) -> _CollectT:
         """Collect all remaining items from the iterator into a container (tuple by default).
 
         Returns:
@@ -240,7 +240,7 @@ class Itr[T](Iterator[T]):
             ((4, 2), (2, 1), (3, 2), (1, 1))
         """
         # note the (item, count) ordering matches value_counts, and is the reverse of Rust's dedup_with_count
-        return cast("Itr[tuple[T, int]]", Itr((k, sum(1 for _ in g)) for k, g in itertools.groupby(self._it)))
+        return Itr((k, sum(1 for _ in g)) for k, g in itertools.groupby(self._it))
 
     def enumerate(self, *, start: int = 0) -> "Itr[tuple[int, T]]":
         """Yield pairs of (index, item) for each item in the iterator, where index starts at 0 or the value provided
@@ -255,7 +255,7 @@ class Itr[T](Iterator[T]):
             >>> Itr("ab").enumerate(start=1).collect()
             ((1, 'a'), (2, 'b'))
         """
-        return cast("Itr[tuple[int, T]]", Itr(enumerate(self._it, start)))
+        return Itr(enumerate(self._it, start))
 
     def eq(self, other: Iterable[Any]) -> bool:
         """Compare the remaining items with another iterable, element by element (like Rust's `Iterator::eq`).
@@ -277,6 +277,7 @@ class Itr[T](Iterator[T]):
             >>> Itr([1, 2, 3]).eq([1, 2])
             False
         """
+        # TODO(py3.15): when 3.15 is the minimum, use a PEP 661 sentinel("UNEQUAL") here for a readable repr
         unequal = object()
         return all(a == b for a, b in itertools.zip_longest(self._it, other, fillvalue=unequal))
 
@@ -407,7 +408,7 @@ class Itr[T](Iterator[T]):
         """
         key_fn = cast("Callable[[T], Any]", grouper)
         groups = ((k, tuple(v)) for k, v in itertools.groupby(self._it, key=key_fn))
-        return cast("Itr[tuple[U, tuple[T, ...]]]", Itr(groups))
+        return Itr(groups)
 
     def groupby[U](self, grouper: Callable[[T], U], *, sort: bool = True) -> "Itr[tuple[U, tuple[T,...]]]":
         """
@@ -446,7 +447,7 @@ class Itr[T](Iterator[T]):
             for item in self._it:
                 groups_by_key.setdefault(grouper(item), []).append(item)
             groups = ((k, tuple(v)) for k, v in groups_by_key.items())
-        return cast("Itr[tuple[U, tuple[T, ...]]]", Itr(groups))
+        return Itr(groups)
 
     def inspect(self, func: Callable[[T], None]) -> "Itr[T]":
         """
@@ -485,7 +486,7 @@ class Itr[T](Iterator[T]):
 
         """
 
-        def intersperser(item: U) -> Generator[T | U, None, None]:
+        def intersperser(item: U) -> Generator[T | U]:
             try:
                 current = next(self._it)
                 while True:
@@ -495,7 +496,7 @@ class Itr[T](Iterator[T]):
             except StopIteration:
                 return
 
-        return cast("Itr[T | U]", Itr(intersperser(item)))
+        return Itr(intersperser(item))
 
     def interleave[U](self, *others: Iterable[U]) -> "Itr[T | U]":
         """
@@ -517,15 +518,17 @@ class Itr[T](Iterator[T]):
             >>> Itr([1, 4, 7]).interleave([2, 5], [3]).collect()
             (1, 2, 3, 4, 5, 7)
         """
+        # TODO(py3.15): when 3.15 is the minimum, use a PEP 661 sentinel("MISSING") here: ty can narrow
+        # `item is not MISSING` on a declared sentinel (it can't on object()), so the cast below can be dropped
         _sentinel = object()
 
-        def interleaver() -> Generator[T | U, None, None]:
+        def interleaver() -> Generator[T | U]:
             for row in itertools.zip_longest(self._it, *others, fillvalue=_sentinel):
                 for item in row:
                     if item is not _sentinel:
                         yield cast("T | U", item)
 
-        return cast("Itr[T | U]", Itr(interleaver()))
+        return Itr(interleaver())
 
     def is_sorted(self, key: Callable[[T], Any] | None = None, *, reverse: bool = False) -> bool:
         """Check whether the remaining items are in sorted order (like Rust's `Iterator::is_sorted`).
@@ -758,7 +761,7 @@ class Itr[T](Iterator[T]):
             Itr[tuple[T, T]]: An iterator over consecutive pairs from the original iterable.
 
         """
-        return cast("Itr[tuple[T, T]]", Itr(itertools.pairwise(self._it)))
+        return Itr(itertools.pairwise(self._it))
 
     def partition(self, predicate: Predicate[T]) -> tuple["Itr[T]", "Itr[T]"]:
         """
@@ -784,7 +787,7 @@ class Itr[T](Iterator[T]):
         matching: deque[T] = deque()
         non_matching: deque[T] = deque()
 
-        def side(mine: deque[T]) -> Generator[T, None, None]:
+        def side(mine: deque[T]) -> Generator[T]:
             while True:
                 while not mine:
                     try:
@@ -871,7 +874,7 @@ class Itr[T](Iterator[T]):
         Returns:
             Itr[tuple[T, U]]: Iterator of 2-tuples with elements from each input iterator.
         """
-        return cast("Itr[tuple[T, U]]", Itr(itertools.product(self._it, other)))
+        return Itr(itertools.product(self._it, other))
 
     def reduce(self, func: Callable[[T, T], T]) -> T:
         """Reduce the iterator to a single value using a function, taking the first item as the initial value.
@@ -932,7 +935,7 @@ class Itr[T](Iterator[T]):
 
         iterators = itertools.tee(self._it, n)
         shifted_iterators = (itertools.islice(it, i, None) for i, it in enumerate(iterators))
-        return cast("Itr[tuple[T, ...]]", Itr(zip(*shifted_iterators, strict=False)))
+        return Itr(zip(*shifted_iterators, strict=False))
 
     def scan[S, U](self, init: S, func: Callable[[S, T], tuple[S, U] | None]) -> "Itr[U]":
         """Lazily map items through a running state, optionally stopping early (like Rust's `Iterator::scan`).
@@ -956,7 +959,7 @@ class Itr[T](Iterator[T]):
             (1, 3)
         """
 
-        def gen() -> Generator[U, None, None]:
+        def gen() -> Generator[U]:
             state = init
             for item in self._it:
                 result = func(state, item)
@@ -1172,7 +1175,7 @@ class Itr[T](Iterator[T]):
             ('apple', 'banana')
         """
 
-        def gen() -> Generator[T, None, None]:
+        def gen() -> Generator[T]:
             seen: set[Any] = set()
             for item in self._it:
                 k = item if key is None else key(item)
@@ -1214,7 +1217,7 @@ class Itr[T](Iterator[T]):
             >>> Itr("abracadabra").value_counts().collect()
             (('a', 5), ('b', 2), ('r', 2), ('c', 1), ('d', 1))
         """
-        return cast("Itr[tuple[T, int]]", Itr(Counter(self._it).most_common()))
+        return Itr(Counter(self._it).most_common())
 
     def zip[U](self, other: Iterable[U], *, strict: bool = False) -> "Itr[tuple[T, U]]":
         """Yield pairs of items from this iterator and another iterable, stopping at the end of the shorter one.
@@ -1231,7 +1234,7 @@ class Itr[T](Iterator[T]):
             >>> Itr([1, 2, 3]).zip("ab").collect()
             ((1, 'a'), (2, 'b'))
         """
-        return cast("Itr[tuple[T, U]]", Itr(zip(self._it, other, strict=strict)))
+        return Itr(zip(self._it, other, strict=strict))
 
     def zip_longest[U, V](
         self, other: Iterable[U], *, fillvalue: V | None = None
@@ -1252,7 +1255,4 @@ class Itr[T](Iterator[T]):
             >>> Itr([1, 2, 3]).zip_longest("ab", fillvalue="-").collect()
             ((1, 'a'), (2, 'b'), (3, '-'))
         """
-        return cast(
-            "Itr[tuple[T | V | None, U | V | None]]",
-            Itr(itertools.zip_longest(self._it, other, fillvalue=fillvalue)),
-        )
+        return Itr(itertools.zip_longest(self._it, other, fillvalue=fillvalue))

@@ -58,7 +58,6 @@ for item in filter(
     map(lambda x: x * x, islice(islice(reversed(range(100)), None, None, 4), 10, None)),
 ):
     print(item)
-
 ```
 
 ### Outputs

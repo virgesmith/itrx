@@ -1,3 +1,9 @@
+## Unreleased
+
+### Breaking changes
+
+- Python 3.12 is no longer supported. Supported versions are now 3.13, 3.14 and 3.15.
+
 ## 0.5.0
 
 ### Breaking changes

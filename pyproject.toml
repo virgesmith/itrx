@@ -8,11 +8,11 @@ authors = [
 ]
 license = "MIT"
 license-files = ["LICENCE.md"]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 classifiers = [
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Operating System :: OS Independent",
 ]
 
@@ -32,8 +32,8 @@ dev = [
     "pre-commit>=4.5.1",
     "pytest>=9.1.1",
     "pytest-cov>=6.2.1",
-    "ruff>=0.15.20",
-    "ty>=0.0.56",
+    "ruff>=0.16.10",
+    "ty>=0.0.85",
 ]
 
 [project.optional-dependencies]
